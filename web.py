@@ -1,16 +1,18 @@
 import collections
+import inspect
 import os.path
 
 import cherrypy
 
 from database import db, read_experiment
+from scheduler import events
 
 
 ###############################################################################
 # HTML template for the common part of the UI.
 ###############################################################################
 
-t_main = '''
+t_main = '''\
 <!DOCTYPE html>
 <html>
 <head>
@@ -139,6 +141,69 @@ Built with nanpy, cherrypy, sqlite, bokeh, purecss, and more by Hegarty, Krastan
 </body>
 </html>
 '''
+
+
+###############################################################################
+# The archive template (list of all experiments).
+###############################################################################
+
+t_new = '''
+<h1>New Experiment</h1>
+<form class="pure-form pure-form-aligned">
+    <fieldset>
+        <div class="pure-control-group">
+            <label for="name">Experiment Name</label>
+            <input id="name" type="text" placeholder="">
+        </div>
+
+        <div class="pure-control-group">
+            <label for="strain">Strain</label>
+            <input id="strain" type="text" placeholder="">
+        </div>
+
+        <div class="pure-control-group">
+            <label for="">Row Notes</label>
+            <input id="row1" type="text" placeholder="">
+            <input id="row2" type="text" placeholder="">
+            <input id="row3" type="text" placeholder="">
+            <input id="row4" type="text" placeholder="">
+        </div>
+
+        <div class="pure-control-group">
+            <label for="">Column Notes</label>
+            <input id="col1" type="text" placeholder="">
+            <input id="col2" type="text" placeholder="">
+            <input id="col3" type="text" placeholder="">
+            <input id="col4" type="text" placeholder="">
+            <input id="col5" type="text" placeholder="">
+        </div>
+
+        <div class="pure-control-group">
+            <label for="description">Description</label>
+            <textarea id="description" placeholder=""></textarea>
+        </div>
+
+        {events}
+
+        <div class="pure-controls">
+            <button type="submit" class="pure-button pure-button-primary">Start Experiment</button>
+        </div>
+    </fieldset>
+</form>
+'''
+
+t_new_event = '''
+{event_name}, {event_description}: {event_arguments}
+'''
+
+def format_new_html():
+    ''' '''
+    events_html=[t_new_event.format(
+                        event_name=e.__name__,
+                        event_description=e.__doc__,
+                        event_arguments=inspect.signature(e.__init__))
+     for e in events]
+    return t_main.format(main_article=t_new.format(events=events_html))
 
 
 ###############################################################################
@@ -443,6 +508,10 @@ class Root:
         with db:
             db.execute('''DELETE FROM %s WHERE %s=?'''%(table, primary_key),
                        (entry,))
+
+    @cherrypy.expose
+    def new(self):
+        return format_new_html()
 
 
 ###############################################################################

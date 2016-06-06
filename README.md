@@ -9,9 +9,10 @@ Automated bioreactor for bacteria growth.
   (`reactor`, `database`, `calibration`, etc.). The number of wells is hard
   codded (maybe it will move to `calibration` in the distant future).
 
-- Two threads are running: the scheduler from submodule `scheduler` and the web
+- Three threads are running: the scheduler from submodule `scheduler` and the web
   interface from submodule `web`. The web interface talks to the scheduler, but
-  the scheduler does not talk to anybody.
+  the scheduler does not talk to anybody. The third thread is the temperature
+  control.
 
 - An `sqlite` on-disk database is used by both threads. Both threads access the
   database for reading and writing, relying only on `sqlite`'s internal locks.
@@ -23,3 +24,6 @@ Automated bioreactor for bacteria growth.
 
 - Not much attention is paid to encoding url parameters. Non ASCII parameters
   are not guaranteed to work.
+
+- Temperature control is done with a PID loop in a separate (third) thread. It
+  relies on `nanpy` for properly locking the serial connection resource.

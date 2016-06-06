@@ -42,8 +42,10 @@ if new_db:
     CREATE TABLE species (
         name TEXT PRIMARY KEY NOT NULL,
         description TEXT,
-        light_ratio_to_od_formula TEXT NOT NULL -- not properly type checked whether it is actual python math expression
-    );
+        light_ratio_to_od_formula TEXT NOT NULL, -- not properly type checked whether it is actual python math expression
+        od_to_biomass_formula TEXT NOT NULL,
+        od_to_cell_count_formula TEXT NOT NULL
+   );
 
     -- The table of experiments ran and running on the reactor.
     CREATE TABLE experiments (
@@ -158,8 +160,9 @@ def add_mock_data():
     ones = np.ones((4,5))
     rand = lambda : np.random.random((4,5))*2-1
     with db:
-        db.execute('''INSERT INTO species (name, light_ratio_to_od_formula)
-                      VALUES ('mock_species', '-log(x)')''')
+        db.execute('''INSERT INTO species (name, light_ratio_to_od_formula,
+                                           od_to_biomass_formula, od_to_cell_count_formula)
+                      VALUES ('mock_species', '-log(x)', 'x', 'x')''')
         for m in range(5):
             db.execute('''INSERT INTO experiments (name, description, species_name, timestamp)
                           VALUES (?, ?, 'mock_species', ?)''',
