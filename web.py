@@ -144,13 +144,14 @@ Built with nanpy, cherrypy, sqlite, bokeh, purecss, and more by Hegarty, Krastan
 
 
 ###############################################################################
-# The archive template (list of all experiments).
+# The "setup a new experiment" template.
 ###############################################################################
 
 t_new = '''
 <h1>New Experiment</h1>
 <form class="pure-form pure-form-aligned">
     <fieldset>
+        <legend>General</legend>
         <div class="pure-control-group">
             <label for="name">Experiment Name</label>
             <input id="name" type="text" placeholder="">
@@ -162,42 +163,49 @@ t_new = '''
         </div>
 
         <div class="pure-control-group">
+            <label for="description">Description</label>
+            <textarea id="description" placeholder=""></textarea>
+        </div>
+    </fieldset>
+
+    <fieldset>
+        <legend>Well Details</legend>
+        <div class="pure-control-group">
             <label for="">Row Notes</label>
-            <input id="row1" type="text" placeholder="">
-            <input id="row2" type="text" placeholder="">
-            <input id="row3" type="text" placeholder="">
-            <input id="row4" type="text" placeholder="">
+            <input id="row1" class="pure-u-1-8" type="text" placeholder="row 1">
+            <input id="row2" class="pure-u-1-8" type="text" placeholder="row 2">
+            <input id="row3" class="pure-u-1-8" type="text" placeholder="row 3">
+            <input id="row4" class="pure-u-1-8" type="text" placeholder="row 4">
         </div>
 
         <div class="pure-control-group">
             <label for="">Column Notes</label>
-            <input id="col1" type="text" placeholder="">
-            <input id="col2" type="text" placeholder="">
-            <input id="col3" type="text" placeholder="">
-            <input id="col4" type="text" placeholder="">
-            <input id="col5" type="text" placeholder="">
+            <input id="col1" class="pure-u-1-8" type="text" placeholder="col 1">
+            <input id="col2" class="pure-u-1-8" type="text" placeholder="col 2">
+            <input id="col3" class="pure-u-1-8" type="text" placeholder="col 3">
+            <input id="col4" class="pure-u-1-8" type="text" placeholder="col 4">
+            <input id="col5" class="pure-u-1-8" type="text" placeholder="col 5">
         </div>
+    </fieldset>
 
-        <div class="pure-control-group">
-            <label for="description">Description</label>
-            <textarea id="description" placeholder=""></textarea>
-        </div>
-
+    <fieldset>
+        <legend>Configuration</legend>
         {events}
+    </fieldset>
 
         <div class="pure-controls">
             <button type="submit" class="pure-button pure-button-primary">Start Experiment</button>
         </div>
-    </fieldset>
 </form>
 '''
 
+# Template for the configuration for a single event type
 t_new_event = '''
 {event_name}, {event_description}: {event_arguments}
 '''
 
 def format_new_html():
-    ''' '''
+    '''Create a configuration page for the setup of a new experiment.'''
     events_html=[t_new_event.format(
                         event_name=e.__name__,
                         event_description=e.__doc__,
