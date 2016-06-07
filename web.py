@@ -163,6 +163,16 @@ t_new = '''
         </div>
 
         <div class="pure-control-group">
+            <label for="temp">Initial Temperature</label>
+            <input id="temp" type="text" placeholder="">
+        </div>
+
+        <div class="pure-control-group">
+            <label for="light">Initial Light Levels</label>
+            <input id="light" type="text" placeholder="">
+        </div>
+
+        <div class="pure-control-group">
             <label for="description">Description</label>
             <textarea id="description" placeholder=""></textarea>
         </div>
@@ -193,24 +203,48 @@ t_new = '''
         {events}
     </fieldset>
 
-        <div class="pure-controls">
-            <button type="submit" class="pure-button pure-button-primary">Start Experiment</button>
-        </div>
+    <div class="pure-controls">
+        <button type="submit" class="pure-button pure-button-primary">Start Experiment</button>
+    </div>
 </form>
 '''
 
-# Template for the configuration for a single event type
+# Template for the configuration for a single event type.
 t_new_event = '''
-{event_name}, {event_description}: {event_arguments}
+<div>
+<h5>{event_name}</h5>
+<p>{event_description}</p>
+<div class="pure-controls">
+<label><input id="{event_name}_check" type="checkbox"> Include this event type!</label>
+</div>
+{event_arguments}
+</div>
 '''
+
+# Template for an argument field (multiple arguments per event type).
+t_new_event_args = '''
+<div class="pure-control-group">
+    <label for="{event_name}_{arg}">{arg}</label>
+    <input id="{event_name}_{arg}" placeholder="" type="text">
+</div>
+'''
+
+def format_event_arguments(event):
+    '''Given an event, return a form with all arguments for that event.'''
+    arguments = list(inspect.signature(event.__init__).parameters)[1:]
+    arguments_html='\n'.join([t_new_event_args.format(
+                                event_name=event.__name__,
+                                arg=arg)
+                              for arg in arguments])
+    return arguments_html
 
 def format_new_html():
     '''Create a configuration page for the setup of a new experiment.'''
-    events_html=[t_new_event.format(
-                        event_name=e.__name__,
-                        event_description=e.__doc__,
-                        event_arguments=inspect.signature(e.__init__))
-     for e in events]
+    events_html='\n'.join([t_new_event.format(
+                             event_name=e.__name__,
+                             event_description=e.__doc__,
+                             event_arguments=format_event_arguments(e))
+                           for e in events])
     return t_main.format(main_article=t_new.format(events=events_html))
 
 

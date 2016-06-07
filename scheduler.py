@@ -26,6 +26,7 @@ class StartExperiment(Event):
         reactor.pause()
 
 class MeasureTemp(Event):
+    '''Periodically measure the temperature of the wells.'''
     def __init__(self, delay):
         self.delay = delay
 
@@ -38,6 +39,7 @@ class MeasureTemp(Event):
         s.enter(...)
 
 class MeasureLightOut(Event):
+    '''Periodically measure the light coming out of the wells.'''
     def __init__(self, delay):
         self.delay = delay
 
@@ -50,6 +52,7 @@ class MeasureLightOut(Event):
         s.enter(...)
 
 class WaterFill(Event):
+    '''Periodically fill up with water (for evaporative losses).'''
     def __init__(self, delay):
         self.delay = delay
 
@@ -62,6 +65,7 @@ class WaterFill(Event):
         s.enter(...)
 
 class DrainFill(Event):
+    '''Periodically drain and refill with media.'''
     def __init__(self, delay, drain_volume):
         self.delay = delay
         self.drain_volume = drain_volume
@@ -80,4 +84,4 @@ class DrainFill(Event):
         s.enter(...)
 
 
-events = [StartExperiment, MeasureTemp, DrainFill]
+events = [MeasureTemp, MeasureLightOut, WaterFill, DrainFill]
