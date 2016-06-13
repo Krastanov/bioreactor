@@ -59,6 +59,8 @@ ul.boxed-list > li {{
 }}
 .button-error {{
     background: rgb(202, 60, 60); /* this is a maroon */
+    color: white;
+    font-weight: bold;
 }}
 .button-warning {{
     background: rgb(223, 117, 20); /* this is an orange */
@@ -70,8 +72,8 @@ ul.boxed-list > li {{
     vertical-align: bottom;
 }}
 .dark-class {{
-    background-color: rgba(255, 0, 0, 0.4);;
-    z-index: 20;
+    background-color: rgba(255, 100, 100, 0.4);;
+    z-index: 1000;
     height: 100%;
     width: 100%;
     background-repeat:no-repeat;
@@ -82,7 +84,7 @@ ul.boxed-list > li {{
 }}
 .dark-class > * {{
     text-align: center;
-    color: red;
+    color: darkred;
 }}
 </style>
 <script>
@@ -525,13 +527,45 @@ def format_experiment_html(experiment, plot_type):
 
 
 ###############################################################################
+# The current experiment status template.
+###############################################################################
+
+t_status = '''
+<h1>Current Status</h1>
+<div class="pure-g">
+<div class="pure-u-1"><button class="pure-button button-error"> Stop </button></div>
+<div class="pure-u-1">{experiment_name} ({strain}): {description}</div>
+<div class="pure-u-3-4">plots</div>
+<div class="pure-u-1-4">
+    <div>upcoming events</div>
+    <div>notes including adding notes</div>
+</div>
+</div>
+'''
+
+def format_status_html():
+    '''Create a status page for the current experiment.'''
+    from scheduler import current_experiment
+    if current_experiment is None:
+        return t_main.format(main_article='<h1>No Experiments Running</h1>')
+    with db:
+        c = db.execute('''SELECT species_name, description FROM experiments
+                       WHERE name=?''',
+                       (current_experiment,))
+        strain, description = c.fetchone()
+    return t_main.format(main_article=t_status.format(experiment_name=current_experiment,
+                                                      strain=strain,
+                                                      description=description))
+
+
+###############################################################################
 # The UI server implementation.
 ###############################################################################
 
 class Root:
     @cherrypy.expose
     def index(self):
-        return t_main.format(main_article='')
+        return format_status_html()
 
     @cherrypy.expose
     def archive(self):
