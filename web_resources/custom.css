@@ -1,0 +1,65 @@
+body{
+    min-width:1220px;
+    width: auto !important;
+}
+.pure-g > div {
+    box-sizing: border-box;
+    padding: 1em;
+}
+ul, li {
+    list-style-type: none;
+    margin: 0;
+    padding: 0;
+}
+ul.boxed-list > li {
+    border-radius: 4px;
+    border: 1px solid gray;
+}
+.max-height-scroll {
+    overflow-y: auto;
+    max-height: 450px;
+}
+.button-xsmall {
+    font-size: 70%;
+}
+.button-small {
+    font-size: 85%;
+}
+.button-large {
+    font-size: 110%;
+}
+.button-xlarge {
+    font-size: 125%;
+}
+.button-success {
+    background: rgb(28, 184, 65); /* this is a green */
+}
+.button-error {
+    background: rgb(202, 60, 60); /* this is a maroon */
+    color: white;
+    font-weight: bold;
+}
+.button-warning {
+    background: rgb(223, 117, 20); /* this is an orange */
+}
+.button-secondary {
+    background: rgb(66, 184, 221); /* this is a light blue */
+}
+.pure-button {
+    vertical-align: bottom;
+}
+.dark-class {
+    background-color: rgba(202, 60, 60, 0.4);;
+    z-index: 1000;
+    height: 100%;
+    width: 100%;
+    background-repeat:no-repeat;
+    background-position:center;
+    position:absolute;
+    top: 0px;
+    left: 0px;
+}
+.dark-class > * {
+    text-align: center;
+    color: darkred;
+}
