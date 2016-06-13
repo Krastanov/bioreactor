@@ -352,7 +352,7 @@ def format_bokeh_plot_html(experiment, plot_type):
                     y_range=range_y,
                     webgl=webgl)
     range_x = p_mean.x_range
-    p_mean.line(source=ds, x='timestamp', y='c%d'%c, color='black', legend='mean', line_width=2)
+    p_mean.line(source=ds, x='timestamp', y='c%d'%c, color='black', legend='avg', line_width=2)
     p_mean.line(source=ds, x='timestamp', y='c%d'%c, color='red',   legend='max',  line_width=2)
     p_mean.line(source=ds, x='timestamp', y='c%d'%c, color='blue',  legend='min',  line_width=2)
     p_mean.border_fill_color = "white"
@@ -411,7 +411,7 @@ def format_bokeh_plot_html(experiment, plot_type):
     p_cols.legend.background_fill_alpha = 0.5
 
     # Final layout and html generation.
-    final_plot = vplot(hplot(p_wells, p_rows),hplot(p_cols, p_mean))
+    final_plot = vplot(hplot(p_mean, p_cols), hplot(p_rows, p_wells))
     bokeh_script, bokeh_div = components(final_plot)
     return bokeh_div+'\n'+bokeh_script
 
