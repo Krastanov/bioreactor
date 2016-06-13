@@ -336,7 +336,7 @@ def format_bokeh_plot_html(experiment, plot_type):
         df['r%d'%r] = df['data'].apply(lambda _:_[r,:].mean())
     for c in range(5):
         df['c%d'%c] = df['data'].apply(lambda _:_[:,c].mean())
-    df['mean'] = df['data'].apply(lambda _:_.mean())
+    df['avg'] = df['data'].apply(lambda _:_.mean())
     df['min'] = df['data'].apply(lambda _:_.min())
     df['max'] = df['data'].apply(lambda _:_.max())
     ds = ColumnDataSource(df)
@@ -352,9 +352,9 @@ def format_bokeh_plot_html(experiment, plot_type):
                     y_range=range_y,
                     webgl=webgl)
     range_x = p_mean.x_range
-    p_mean.line(source=ds, x='timestamp', y='c%d'%c, color='black', legend='avg', line_width=2)
-    p_mean.line(source=ds, x='timestamp', y='c%d'%c, color='red',   legend='max',  line_width=2)
-    p_mean.line(source=ds, x='timestamp', y='c%d'%c, color='blue',  legend='min',  line_width=2)
+    p_mean.line(source=ds, x='timestamp', y='avg', color='black', legend='avg', line_width=2)
+    p_mean.line(source=ds, x='timestamp', y='max', color='red',   legend='max',  line_width=2)
+    p_mean.line(source=ds, x='timestamp', y='min', color='blue',  legend='min',  line_width=2)
     p_mean.border_fill_color = "white"
     p_mean.legend.background_fill_alpha = 0.5
 
