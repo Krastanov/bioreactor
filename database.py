@@ -12,6 +12,7 @@ import pandas as pd
 
 def adapt_array(arr):
     '''Take a numpy array and return an sqlite record.'''
+    arr = np.array(arr, dtype=float)
     assert arr.shape == (4,5), 'Data matrix should have 4 rows and 5 cols.'
     out = io.BytesIO()
     np.save(out, arr)
@@ -32,8 +33,8 @@ sqlite3.register_converter("REACTOR_ARRAY", convert_array)
 # Open the database file. If such file does not exists, create a new database.
 ###############################################################################
 
-new_db = not os.path.isfile('reactor_database.sqlite')
-db = sqlite3.connect('reactor_database.sqlite', detect_types=sqlite3.PARSE_DECLTYPES, check_same_thread=False)
+new_db = not os.path.isfile('database.sqlite')
+db = sqlite3.connect('database.sqlite', detect_types=sqlite3.PARSE_DECLTYPES, check_same_thread=False)
 db.row_factory = sqlite3.Row
 if new_db:
     db.executescript('''
