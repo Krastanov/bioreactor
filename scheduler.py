@@ -25,7 +25,7 @@ class StartExperiment(Event):
         reactor.fill_with_media()
         reactor.set_light_input(self.light)
         with db:
-            db.execute('''INSERT INTO experiments (name, description, species_name)
+            db.execute('''INSERT INTO experiments (name, description, strain_name)
                           VALUES (?, ?, ?)''',
                           (current_experiment, self.description, self.strain))
             light_in_data = reactor.light_input_array()

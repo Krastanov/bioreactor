@@ -32,7 +32,7 @@ t_main = '''\
         <li class="pure-menu-item"><a href="/"        class="pure-menu-link">Status</a></li>
         <li class="pure-menu-item"><a href="/new"     class="pure-menu-link">New Experiment</a></li>
         <li class="pure-menu-item"><a href="/archive" class="pure-menu-link">Archive</a></li>
-        <li class="pure-menu-item"><a href="/species" class="pure-menu-link">Species</a></li>
+        <li class="pure-menu-item"><a href="/strains" class="pure-menu-link">Strain</a></li>
     </ul>
 </nav>
 <article class="pure-g">
@@ -170,8 +170,8 @@ t_archive = '''
     <button type="button" class="button-xsmall pure-button" onClick="experimentsList.sort('list_name',     {{order:'desc'}});">invert</button>
     <button type="button" class="list_sort pure-button" data-sort="list_timestamp">Sort by starting time</button>
     <button type="button" class="button-xsmall pure-button" onClick="experimentsList.sort('list_timestamp',{{order:'desc'}});">invert</button>
-    <button type="button" class="list_sort pure-button" data-sort="list_species">  Sort by species      </button>
-    <button type="button" class="button-xsmall pure-button" onClick="experimentsList.sort('list_species',  {{order:'desc'}});">invert</button>
+    <button type="button" class="list_sort pure-button" data-sort="list_strain">  Sort by strain      </button>
+    <button type="button" class="button-xsmall pure-button" onClick="experimentsList.sort('list_strain',  {{order:'desc'}});">invert</button>
     </fieldset>
     </form>
 </div>
@@ -181,7 +181,7 @@ t_archive = '''
 </div>
 <script>
 var options = {{
-  valueNames: [ 'list_name', 'list_timestamp', 'list_species', 'list_description', 'list_rows', 'list_cols', 'list_description', 'list_notes' ],
+  valueNames: [ 'list_name', 'list_timestamp', 'list_strain', 'list_description', 'list_rows', 'list_cols', 'list_description', 'list_notes' ],
   listClass: 'list_list',
   searchClass: 'list_search',
   sortClass: 'list_sort'
@@ -204,8 +204,8 @@ t_archive_entry = '''
         <dl>
         <dt>Starting time:</dt>
         <dd><time class="list_timestamp">{timestamp:%Y-%m-%d %H:%M:%S}</time></dd>
-        <dt>Species:</dt>
-        <dd class="list_species">{species_name}</dd>
+        <dt>Strain:</dt>
+        <dd class="list_strain">{strain_name}</dd>
         </dl>
         <table class="pure-table">
         <thead><tr><th>R#</th><th>Notes</th></tr></thead>
@@ -452,7 +452,7 @@ def format_status_html():
     if current_experiment is None:
         return t_main.format(main_article='<h1>No Experiments Running</h1>')
     with db:
-        c = db.execute('''SELECT species_name, description FROM experiments
+        c = db.execute('''SELECT strain_name, description FROM experiments
                        WHERE name=?''',
                        (current_experiment,))
         strain, description = c.fetchone()

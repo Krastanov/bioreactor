@@ -39,8 +39,8 @@ db.row_factory = sqlite3.Row
 if new_db:
     db.executescript('''
 
-    -- Species that the reactor knows how to work with.
-    CREATE TABLE species (
+    -- Strain that the reactor knows how to work with.
+    CREATE TABLE strains (
         name TEXT PRIMARY KEY NOT NULL,
         description TEXT,
         light_ratio_to_od_formula TEXT NOT NULL, -- not properly type checked whether it is actual python math expression
@@ -53,7 +53,7 @@ if new_db:
         name TEXT PRIMARY KEY NOT NULL,
         timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
         description TEXT,
-        species_name TEXT NOT NULL REFERENCES species(name) ON DELETE CASCADE,
+        strain_name TEXT NOT NULL REFERENCES strains(name) ON DELETE CASCADE,
         row1 TEXT,
         row2 TEXT,
         row3 TEXT,
@@ -139,10 +139,10 @@ def read_experiment(experiment, table):
 
 def parse_formula(experiment, formula):
     with db:
-        query = db.execute('''SELECT species_name FROM experiments
+        query = db.execute('''SELECT strain_name FROM experiments
                               WHERE experiment=?''',
                            (experiment,))
-        species = next(query)[0]
+        strain = next(query)[0]
         query = db.execute('''SELECT ''')
 
 
@@ -152,7 +152,7 @@ def parse_formula(experiment, formula):
 ###############################################################################
 
 def add_mock_data():
-    '''Generate a mock species and experiments and add data points to each.'''
+    '''Generate a mock strain and experiments and add data points to each.'''
     import datetime
     import numpy as np
     now = datetime.datetime.now()
@@ -161,12 +161,12 @@ def add_mock_data():
     ones = np.ones((4,5))
     rand = lambda : np.random.random((4,5))*2-1
     with db:
-        db.execute('''INSERT INTO species (name, light_ratio_to_od_formula,
+        db.execute('''INSERT INTO strains (name, light_ratio_to_od_formula,
                                            od_to_biomass_formula, od_to_cell_count_formula)
-                      VALUES ('mock_species', '-log(x)', 'x', 'x')''')
+                      VALUES ('mock_strain', '-log(x)', 'x', 'x')''')
         for m in range(5):
-            db.execute('''INSERT INTO experiments (name, description, species_name, timestamp)
-                          VALUES (?, ?, 'mock_species', ?)''',
+            db.execute('''INSERT INTO experiments (name, description, strain_name, timestamp)
+                          VALUES (?, ?, 'mock_strain', ?)''',
                           ('mock%d'%m, lorem_ipsum if m==3 else None, now+m*day))
             for i in range(20):
                 db.execute('''INSERT INTO light_in__uEm2s  (experiment_name, timestamp, data)
@@ -199,7 +199,7 @@ def add_mock_data():
 def del_mock_data():
     '''Delete the mock data (relies on automatic CASCADEing).'''
     with db:
-        db.execute('''DELETE FROM species WHERE name='mock_species' ''')
+        db.execute('''DELETE FROM strains WHERE name='mock_strain' ''')
 
 lorem_ipsum = '''
 Lorem ipsum dolor sit amet, consectetur adipiscing elit. Ut placerat tristique
