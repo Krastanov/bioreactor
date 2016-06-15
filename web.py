@@ -1,5 +1,6 @@
 import collections
 import inspect
+import threading
 import os.path
 
 import cherrypy
@@ -500,6 +501,10 @@ class Root:
 cherrypy.config.update({'server.socket_host': '127.0.0.1',
                         'server.socket_port': 8080,
                         'tools.encode.on'   : True,
+                        'environment': 'production',
+                        'log.screen': False,
+                        'log.access_file': '',
+                        'log.error_file': ''
                        })
 
 pwd = os.path.dirname(os.path.realpath(__file__))
@@ -511,12 +516,14 @@ conf = {'/web_resources': {'tools.staticdir.on': True,
 root = Root()
 cherrypy.tree.mount(root=root, config=conf)
 
-
-def start_web_server_and_block():
-    '''Start the web server.'''
+def start_web_interface_thread():
+    '''Start the web server in a dedicated thread. Return thread handler.'''
     cherrypy.engine.start()
-    cherrypy.engine.block()
+    t = threading.Thread(target=cherrypy.engine.block,
+                         name='WebInterface')
+    t.start()
+    return t
 
-
-if __name__ == '__main__':
-    start_web_server_and_block()
+def stop_web_interface_thread():
+    '''Stop the web server thread.'''
+    cherrypy.engine.exit()
