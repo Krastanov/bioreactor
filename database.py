@@ -33,8 +33,10 @@ sqlite3.register_converter("REACTOR_ARRAY", convert_array)
 # Open the database file. If such file does not exists, create a new database.
 ###############################################################################
 
-new_db = not os.path.isfile('database.sqlite')
-db = sqlite3.connect('database.sqlite', detect_types=sqlite3.PARSE_DECLTYPES, check_same_thread=False)
+pwd = os.path.dirname(os.path.realpath(__file__))
+db_file = os.path.join(pwd, 'database.sqlite')
+new_db = not os.path.isfile(db_file)
+db = sqlite3.connect(db_file, detect_types=sqlite3.PARSE_DECLTYPES, check_same_thread=False)
 db.row_factory = sqlite3.Row
 if new_db:
     db.executescript('''
