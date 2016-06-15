@@ -1,13 +1,61 @@
-from sched import scheduler
-from time import sleep
+import logging
+import sched
+import threading
+import time
 
 import numpy as np
 
 from reactor import reactor
 from database import db
 
-s = scheduler()
+logger = logging.getLogger('scheduler')
+
+
+###############################################################################
+# Prepare scheduler.
+###############################################################################
+
+class ResolvedScheduler(sched.scheduler):
+    '''Scheduler where new events can be added for execution at any time.'''
+    def __init__(self, *args, resolution=1, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.resolution = resolution
+    def run(self, blocking=True):
+        if not blocking:
+            return super().run(blocking=False)
+        while True:
+            super().run(blocking=False)
+            self.delayfunc(self.resolution)
+            if self.empty():
+                break
+
+s = ResolvedScheduler()
 current_experiment = None
+
+stop_thread = threading.Event()
+def start_scheduler_thread():
+    '''Start the scheduler in a dedicated thread. Return thread handler.'''
+    def target():
+        '''Continuously run the scheduler. If the queue is empty, wait a second and rerun.'''
+        logger.info('Starting the scheduler...')
+        while not stop_thread.is_set():
+            s.run()
+            time.sleep(1)
+        logger.info('The scheduler has stopped.')
+    t = threading.Thread(target=target,
+                         name='Scheduler')
+    t.start()
+    return t
+
+def stop_scheduler_thread():
+    '''Stop the scheduler thread.'''
+    logger.info('Stopping the scheduler...')
+    stop_thread.set()
+
+
+###############################################################################
+# Experiment events that the scheduler can run.
+###############################################################################
 
 class Event:
     pass
@@ -22,6 +70,7 @@ class StartExperiment(Event):
         self.description = description
 
     def __call__(self):
+        logger.info('Experiment {} starting...', current_experiment)
         reactor.fill_with_media()
         reactor.set_light_input(self.light)
         with db:
@@ -46,7 +95,7 @@ class MeasureTemp(Event):
             db.execute('''INSERT INTO temperature__C (experiment_name, data)
                           VALUES (?, ?)''',
                          (current_experiment, data))
-        print(type(self).__name__, data.mean())
+        logger.info('{} {}', type(self).__name__, data.mean())
         s.enter(self.delay*60,0,self)
 
 class MeasureLightOut(Event):
@@ -60,7 +109,7 @@ class MeasureLightOut(Event):
             db.execute('''INSERT INTO light_out__uEm2s (experiment_name, data)
                           VALUES (?, ?)''',
                          (current_experiment, data))
-        print(type(self).__name__, data.mean())
+        logger.info('{} {}', type(self).__name__, data.mean())
         s.enter(self.delay*60,0,self)
 
 class WaterFill(Event):
@@ -74,7 +123,7 @@ class WaterFill(Event):
             db.execute('''INSERT INTO water__ml (experiment_name, data)
                           VALUES (?, ?)''',
                          (current_experiment, data))
-        print(type(self).__name__, data.mean())
+        logger.info('{} {}', type(self).__name__, data.mean())
         s.enter(self.delay*60,0,self)
 
 class DrainFill(Event):
@@ -94,14 +143,15 @@ class DrainFill(Event):
             db.execute('''INSERT INTO media__ml (experiment_name, data)
                           VALUES (?, ?)''',
                          (current_experiment, media_data))
-        print(type(self).__name__, 'drain', drained_data.mean(), 'media fill', media_data.mean())
+        logger.info('{}: drain {}, media fill {}', type(self).__name__, 'drain', drained_data.mean(), 'media fill', media_data.mean())
         s.enter(self.delay*60,0,self)
 
 class StopExperiment(Event):
     def __call__(self):
-        print('Ending...')
+        logger.info('Experiment {} ending...', current_experiment)
         for event in s.queue:
             s.cancel(event)
-        print('Ended')
+        logger.info('Experiment {} ended.', current_experiment)
 
+# Events that autopopulate the new experiment web page.
 events = [MeasureTemp, MeasureLightOut, WaterFill, DrainFill]

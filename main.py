@@ -3,6 +3,7 @@ import logging.config
 import time
 
 from web import start_web_interface_thread, stop_web_interface_thread
+from scheduler import start_scheduler_thread, stop_scheduler_thread
 
 
 ###############################################################################
@@ -68,6 +69,8 @@ logger = logging.getLogger()
 
 logger.info('Starting all threads.')
 start_web_interface_thread()
+start_scheduler_thread()
 time.sleep(15)
 logger.info('Stopping all threads.')
 stop_web_interface_thread()
+stop_scheduler_thread()
