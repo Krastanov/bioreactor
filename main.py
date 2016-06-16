@@ -47,7 +47,7 @@ LOG_CONF = {
             'propagate': False
         },
         'cherrypy.access': {
-            'handlers': ['default'],
+            'handlers': [],
             'level': 'INFO',
             'propagate': False
         },
@@ -67,10 +67,19 @@ logger = logging.getLogger()
 # Starting all threads.
 ###############################################################################
 
+def report(*threads):
+    return '\n    '.join('%s: %s'%(t.name, t.is_alive()) for t in threads)
+
 logger.info('Starting all threads.')
-start_web_interface_thread()
-start_scheduler_thread()
-time.sleep(15)
+web_interface_thread = start_web_interface_thread()
+scheduler_thread = start_scheduler_thread()
+try:
+    while True:
+        logger.info(report(web_interface_thread,
+                           scheduler_thread))
+        time.sleep(5)
+except KeyboardInterrupt:
+    logger.info('Interrupted by user. Shutting down...')
 logger.info('Stopping all threads.')
 stop_web_interface_thread()
 stop_scheduler_thread()
