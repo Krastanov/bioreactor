@@ -71,8 +71,8 @@ def report(*threads):
     return '\n    '.join('%s: %s'%(t.name, t.is_alive()) for t in threads)
 
 logger.info('Starting all threads.')
-web_interface_thread = start_web_interface_thread()
 scheduler_thread = start_scheduler_thread()
+web_interface_thread = start_web_interface_thread()
 try:
     while True:
         logger.info(report(web_interface_thread,
@@ -81,5 +81,5 @@ try:
 except KeyboardInterrupt:
     logger.info('Interrupted by user. Shutting down...')
 logger.info('Stopping all threads.')
-stop_web_interface_thread()
 stop_scheduler_thread()
+stop_web_interface_thread()
