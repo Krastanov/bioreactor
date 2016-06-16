@@ -199,7 +199,7 @@ t_archive_entry = '''
         <h3 class="list_name"><a href="/experiment/{name}">{name}</a></h3>
     </div>
     <div class="pure-u-1-12">
-        <button class="button-error button-xsmall pure-button" onClick="deleteNearestLI(this);"><i class="fa fa-trash"></i></button>
+        <button class="button-trash pure-button" onClick="deleteNearestLI(this);"><i class="fa fa-trash"></i></button>
     </div>
     <div class="pure-u-1-6">
         <dl>
@@ -257,7 +257,7 @@ t_note = '''
 <h5><time>{timestamp:%Y-%m-%d %H:%M:%S}</time></h5>
 </div>
 <div class="pure-u-1-5">
-<button class="button-error button-xsmall pure-button" onClick="deleteNearestLI(this);"><i class="fa fa-trash"></i></button>
+<button class="button-trash pure-button" onClick="deleteNearestLI(this);"><i class="fa fa-trash"></i></button>
 </div>
 <div class="pure-u-1">{note}</div>
 </li>
@@ -442,7 +442,7 @@ t_status = '''
 <div class="pure-u-3-4">plots</div>
 <div class="pure-u-1-4">
     <div>upcoming events</div>
-    <div>notes including adding notes</div>
+    <div>{notes}</div>
 </div>
 </div>
 '''
@@ -459,7 +459,8 @@ def format_status_html():
         strain, description = c.fetchone()
     return t_main.format(main_article=t_status.format(experiment_name=current_experiment,
                                                       strain=strain,
-                                                      description=description))
+                                                      description=description,
+                                                      notes=format_notes_html(current_experiment)))
 
 
 ###############################################################################
