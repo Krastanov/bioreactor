@@ -38,6 +38,7 @@ db_file = os.path.join(pwd, 'database.sqlite')
 new_db = not os.path.isfile(db_file)
 db = sqlite3.connect(db_file, detect_types=sqlite3.PARSE_DECLTYPES, check_same_thread=False)
 db.row_factory = sqlite3.Row
+db.execute('PRAGMA foreign_keys = ON;')
 if new_db:
     db.executescript('''
 
