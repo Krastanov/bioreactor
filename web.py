@@ -262,10 +262,10 @@ def format_archive_html():
 t_note_main = Template('''
 <h4>Notes</h4>
 <div class="list_notes max-height-scroll">
-<form class="pure-form" method="POST" action="/do_add_note">
+<form class="pure-form">
     <textarea class="pure-input-1" name="note"></textarea>
     <input type="hidden" value="{experiment_name}" name="experiment_name">
-    <button type="submit" class="button-xsmall pure-button pure-button-primary pure-input-1">Add Note</button>
+    <button type="button" onClick="addToNearestUL(this)" class="button-xsmall pure-button pure-button-primary pure-input-1">Add Note</button>
 </form>
 <ul class="boxed-list">
 {HTMLnotes}
@@ -544,8 +544,6 @@ class Root:
             db.execute('''INSERT INTO notes (experiment_name, note)
                           VALUES (?, ?)''',
                        (experiment_name, note))
-        # TODO add it with js instead of refreshing
-        raise HTTPRedirect(cherrypy.request.headers['Referer'])
 
 
 ###############################################################################

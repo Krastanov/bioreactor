@@ -22,9 +22,29 @@ function deleteNearestLI(arg) {
     }
 
     var http = new XMLHttpRequest();
-    var url = "/do_delete/"+li.id.replace("_","/");
-    http.open("GET", url);
-    http.send();
+    var url = "/do_delete";
+    http.open("POST", url);
+    http.setRequestHeader("Content-type", "application/x-www-form-urlencoded");
+    http.send(`table=${li.id.split('_')[0]}&entry=${li.id.split('_')[1]}`);
 
     li.remove();
+}
+
+function addToNearestUL(arg) {
+    var form = arg.parentElement;
+    var div = form.parentElement;
+    var ul = div.getElementsByTagName("UL")[0];
+    var li = document.createElement("LI");
+    var note = form.getElementsByTagName("textarea")[0].value;
+    var experiment = form.getElementsByTagName("input")[0].value;
+    var t = document.createTextNode(note);
+
+    var http = new XMLHttpRequest();
+    var url = "/do_add_note";
+    http.open("POST", url);
+    http.setRequestHeader("Content-type", "application/x-www-form-urlencoded");
+    http.send(`experiment_name=${experiment}&note=${note}`);
+
+    li.appendChild(t);
+    ul.insertBefore(li, ul.firstChild);
 }
