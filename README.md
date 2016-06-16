@@ -7,14 +7,14 @@ Automated bioreactor for bacteria growth.
   variables (`reactor` of class `Reactor`, `db` as an `sqlite3 connection`
   object, `calibration` as a `json dict`, etc.) spread over submodules
   (`reactor`, `database`, `calibration`, etc.). The number of wells is hard
-  codded (maybe it will move to `calibration` in the distant future).
+  coded (maybe it will move to `calibration` in the distant future).
 
-- Three threads are running: the scheduler from submodule `scheduler` and the web
-  interface from submodule `web`. The web interface talks to the scheduler, but
-  the scheduler does not talk to anybody. The third thread is the temperature
-  control.
+- Three threads are created: the scheduler from submodule `scheduler`; the web
+  interface from submodule `web`; the temperature control. The web interface
+  talks to the scheduler from a single location. The scheduler does not talk to
+  anybody.
 
-- An `sqlite` on-disk database is used by both threads. Both threads access the
+- An `sqlite` on-disk database is used by most threads. Both threads access the
   database for reading and writing, relying only on `sqlite`'s internal locks.
   No optimizations of disk access are done (might lead to wear of flash-based
   drives).
@@ -26,4 +26,5 @@ Automated bioreactor for bacteria growth.
   are not guaranteed to work.
 
 - Temperature control is done with a PID loop in a separate (third) thread. It
-  relies on `nanpy` for properly locking the serial connection resource.
+  relies on `nanpy` for properly locking the serial connection resource to the
+  Arduino controller.
