@@ -23,7 +23,8 @@ Automated bioreactor for bacteria growth.
   The navigation toolbar is hardcoded.
 
 - Not much attention is paid to encoding url parameters. Non ASCII parameters
-  are not guaranteed to work.
+  are not guaranteed to work. Special symbols might explode. More testing
+  necessary.
 
 - Temperature control is done with a PID loop in a separate (third) thread. It
   relies on `nanpy` for properly locking the serial connection resource to the

@@ -1,4 +1,5 @@
 import collections
+import html
 import inspect
 import threading
 import os.path
@@ -11,10 +12,24 @@ from scheduler import events
 
 
 ###############################################################################
+# HTML Template class based on `str` that can escape HTML strings.
+###############################################################################
+# XXX Should have used actuall templating library.
+class Template(str):
+    '''HTML escape all strings in `format` except keyword arguments starting with "HTML".'''
+    def format(self, *args, **kwargs):
+        args = (html.escape(_) if isinstance(_, str) else _
+                for _ in args)
+        kwargs = {k: html.escape(_) if (isinstance(_, str) and not k.startswith('HTML')) else _
+                  for k, _ in kwargs.items()}
+        return super().format(*args, **kwargs)
+
+
+###############################################################################
 # HTML template for the common part of the UI.
 ###############################################################################
 
-t_main = '''\
+t_main = Template('''\
 <!DOCTYPE html>
 <html>
 <head>
@@ -39,7 +54,7 @@ t_main = '''\
 </nav>
 <article class="pure-g">
 <div class="pure-u-1">
-{main_article}
+{HTMLmain_article}
 </div>
 </article>
 <footer>
@@ -47,14 +62,14 @@ Built with nanpy, cherrypy, sqlite, bokeh, purecss, and more by Hegarty, Krastan
 </footer>
 </body>
 </html>
-'''
+''')
 
 
 ###############################################################################
 # The "setup a new experiment" template.
 ###############################################################################
 
-t_new = '''
+t_new = Template('''
 <h1>New Experiment</h1>
 <form class="pure-form pure-form-aligned" method="POST" action="do_start_new_experiment">
     <fieldset>
@@ -107,34 +122,34 @@ t_new = '''
 
     <fieldset>
         <legend>Configuration</legend>
-        {events}
+        {HTMLevents}
     </fieldset>
 
     <div class="pure-controls">
         <button type="submit" class="pure-button pure-button-primary">Start Experiment</button>
     </div>
 </form>
-'''
+''')
 
 # Template for the configuration for a single event type.
-t_new_event = '''
+t_new_event = Template('''
 <div>
 <h5>{event_name}</h5>
 <p>{event_description}</p>
 <div class="pure-controls">
 <label><input id="{event_name}__check" name="{event_name}__check" type="checkbox"> Include this event type!</label>
 </div>
-{event_arguments}
+{HTMLevent_arguments}
 </div>
-'''
+''')
 
 # Template for an argument field (multiple arguments per event type).
-t_new_event_args = '''
+t_new_event_args = Template('''
 <div class="pure-control-group">
     <label for="{event_name}_{arg}">{arg}</label>
     <input id="{event_name}_{arg}" name="{event_name}_{arg}" placeholder="" type="text">
 </div>
-'''
+''')
 
 def format_event_arguments(event):
     '''Given an event, return a form with all arguments for that event.'''
@@ -150,16 +165,16 @@ def format_new_html():
     events_html='\n'.join([t_new_event.format(
                              event_name=e.__name__,
                              event_description=e.__doc__,
-                             event_arguments=format_event_arguments(e))
+                             HTMLevent_arguments=format_event_arguments(e))
                            for e in events])
-    return t_main.format(main_article=t_new.format(events=events_html))
+    return t_main.format(HTMLmain_article=t_new.format(HTMLevents=events_html))
 
 
 ###############################################################################
 # The archive template (list of all experiments).
 ###############################################################################
 
-t_archive = '''
+t_archive = Template('''
 <h1>Archive</h1>
 <script src="/web_resources/list.1.2.0.min.js"></script>
 <div id='experiments'>
@@ -178,7 +193,7 @@ t_archive = '''
     </form>
 </div>
 <ul class='list_list boxed-list'>
-{archive_entries}
+{HTMLarchive_entries}
 </ul>
 </div>
 <script>
@@ -191,10 +206,10 @@ var options = {{
 
 var experimentsList = new List('experiments', options);
 </script>
-'''
+''')
 
 # A template for an entry in the list of experiments.
-t_archive_entry = '''
+t_archive_entry = Template('''
 <li class="pure-g fixed-height-block" id="experiments_{name}">
     <div class="pure-u-11-12">
         <h3 class="list_name"><a href="/experiment/{name}">{name}</a></h3>
@@ -228,23 +243,23 @@ t_archive_entry = '''
         <div class="list_description max-height-scroll">{description}</div>
     </div>
     <div class="pure-u-1-2">
-        {notes}
+        {HTMLnotes}
     </div>
 </li>
-'''
+''')
 
 def format_archive_html():
     '''Load all experiments from the database and list them in the HTML template.'''
     with db:
-        entries = '\n'.join(t_archive_entry.format(notes=format_notes_html(r['name']),
+        entries = '\n'.join(t_archive_entry.format(HTMLnotes=format_notes_html(r['name']),
                                                    **r)
                             for r in db.execute('''SELECT * FROM experiments
                                                    ORDER BY timestamp DESC'''))
-    return t_main.format(main_article=t_archive.format(archive_entries=entries))
+    return t_main.format(HTMLmain_article=t_archive.format(HTMLarchive_entries=entries))
 
 
 # Template for presenting a note.
-t_note_main = '''
+t_note_main = Template('''
 <h4>Notes</h4>
 <div class="list_notes max-height-scroll">
 <form class="pure-form" method="POST" action="do_add_note">
@@ -253,11 +268,11 @@ t_note_main = '''
     <button type="submit" class="button-xsmall pure-button pure-button-primary pure-input-1">Add Note</button>
 </form>
 <ul class="boxed-list">
-{notes}
+{HTMLnotes}
 </ul>
 </div>
-'''
-t_note = '''
+''')
+t_note = Template('''
 <li class="pure-g" id="notes_{timestamp}">
 <div class="pure-u-4-5">
 <h5><time>{timestamp:%Y-%m-%d %H:%M:%S}</time></h5>
@@ -267,7 +282,7 @@ t_note = '''
 </div>
 <div class="pure-u-1">{note}</div>
 </li>
-'''
+''')
 
 def format_notes_html(experiment):
     '''Prepare a list of all notes for a given experiment.'''
@@ -276,7 +291,7 @@ def format_notes_html(experiment):
                               WHERE experiment_name=?
                               ORDER BY timestamp DESC''',
                            (experiment,))
-    return t_note_main.format(notes='\n'.join(t_note.format(**r) for r in notes),
+    return t_note_main.format(HTMLnotes='\n'.join(t_note.format(**r) for r in notes),
                               experiment_name=experiment)
 
 
@@ -284,22 +299,22 @@ def format_notes_html(experiment):
 # The experiment template describing a single experiment.
 ###############################################################################
 
-t_experiment = '''
+t_experiment = Template('''
 <h1><a href="/experiment/{name}">Experiment: {name}</a></h1>
 <link rel="stylesheet" href="/web_resources/bokeh.0.11.1.min.css">
 <div class="pure-g">
 <div class="pure-u-1">
-{links}
+{HTMLlinks}
 </div>
 <div class="pure-u-3-4">
 <script src="/web_resources/bokeh.0.11.1.min.js"></script>
-{bokeh}
+{HTMLbokeh}
 </div>
 <div class="pure-u-1-4">
 notes
 </div>
 </div>
-'''
+''')
 
 # A convenient container for everything necessary to define a plot.
 PlotType = collections.namedtuple('PlotType', ['reader', 'min', 'max'])
@@ -430,10 +445,10 @@ def format_experiment_html(experiment, plot_type):
                                experiment=experiment,
                                plot_type=p)
                     for p in possible_plots.keys())
-    return t_main.format(main_article=t_experiment.format(
+    return t_main.format(HTMLmain_article=t_experiment.format(
         name=experiment,
-        links=links,
-        bokeh=format_bokeh_plot_html(experiment, plot_type)
+        HTMLlinks=links,
+        HTMLbokeh=format_bokeh_plot_html(experiment, plot_type)
         ))
 
 
@@ -441,7 +456,7 @@ def format_experiment_html(experiment, plot_type):
 # The current experiment status template.
 ###############################################################################
 
-t_status = '''
+t_status = Template('''
 <h1>Current Status</h1>
 <div class="pure-g">
 <div class="pure-u-1"><button class="pure-button button-error"> Stop </button></div>
@@ -449,25 +464,25 @@ t_status = '''
 <div class="pure-u-3-4">plots</div>
 <div class="pure-u-1-4">
     <div>upcoming events</div>
-    <div>{notes}</div>
+    <div>{HTMLnotes}</div>
 </div>
 </div>
-'''
+''')
 
 def format_status_html():
     '''Create a status page for the current experiment.'''
     from scheduler import current_experiment
     if current_experiment is None:
-        return t_main.format(main_article='<h1>No Experiments Running</h1>')
+        return t_main.format(HTMLmain_article='<h1>No Experiments Running</h1>')
     with db:
         c = db.execute('''SELECT strain_name, description FROM experiments
                        WHERE name=?''',
                        (current_experiment,))
         strain, description = c.fetchone()
-    return t_main.format(main_article=t_status.format(experiment_name=current_experiment,
-                                                      strain=strain,
-                                                      description=description,
-                                                      notes=format_notes_html(current_experiment)))
+    return t_main.format(HTMLmain_article=t_status.format(experiment_name=current_experiment,
+                                                          strain=strain,
+                                                          description=description,
+                                                          HTMLnotes=format_notes_html(current_experiment)))
 
 
 ###############################################################################
@@ -517,7 +532,7 @@ class Root:
         start()
         for e in prepared_events:
             s.enter(0,0,e)
-        return t_main.format(main_article='<h1>New Experiment Started!</h1>')
+        return t_main.format(HTMLmain_article='<h1>New Experiment Started!</h1>')
 
     @cherrypy.expose
     def do_add_note(self, note, experiment_name):
@@ -526,6 +541,7 @@ class Root:
             db.execute('''INSERT INTO notes (experiment_name, note)
                           VALUES (?, ?)''',
                        (experiment_name, note))
+        # TODO add it with js instead of refreshing
         raise HTTPRedirect(cherrypy.request.headers['Referer'])
 
 
@@ -536,6 +552,7 @@ class Root:
 cherrypy.config.update({'server.socket_host': '127.0.0.1',
                         'server.socket_port': 8080,
                         'tools.encode.on'   : True,
+                        'tools.encode.encoding': 'utf-8',
                         'engine.autoreload.on': False,
                         'request.show_tracebacks': True,
                         'request.show_mismatched_params': True,
