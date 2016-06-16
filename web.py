@@ -71,7 +71,7 @@ Built with nanpy, cherrypy, sqlite, bokeh, purecss, and more by Hegarty, Krastan
 
 t_new = Template('''
 <h1>New Experiment</h1>
-<form class="pure-form pure-form-aligned" method="POST" action="do_start_new_experiment">
+<form class="pure-form pure-form-aligned" method="POST" action="/do_start_new_experiment">
     <fieldset>
         <legend>General</legend>
         <div class="pure-control-group">
@@ -262,7 +262,7 @@ def format_archive_html():
 t_note_main = Template('''
 <h4>Notes</h4>
 <div class="list_notes max-height-scroll">
-<form class="pure-form" method="POST" action="do_add_note">
+<form class="pure-form" method="POST" action="/do_add_note">
     <textarea class="pure-input-1" name="note"></textarea>
     <input type="hidden" value="{experiment_name}" name="experiment_name">
     <button type="submit" class="button-xsmall pure-button pure-button-primary pure-input-1">Add Note</button>
@@ -311,7 +311,7 @@ t_experiment = Template('''
 {HTMLbokeh}
 </div>
 <div class="pure-u-1-4">
-notes
+{HTMLnotes}
 </div>
 </div>
 ''')
@@ -369,12 +369,14 @@ def format_bokeh_plot_html(experiment, plot_type):
     webgl = False
     bottom = min(df['min'].min(), plot_type.min)
     top    = max(df['max'].max(), plot_type.max)
+    left   = df['timestamp'].min()
+    right  = df['timestamp'].max()
     range_y = Range1d(bottom, top)
+    range_x = Range1d(left, right)
     p_mean = figure(width=350, height=350, x_axis_type='datetime',
 		    toolbar_location=None, tools=tools,
-                    y_range=range_y,
+                    x_range=range_x, y_range=range_y,
                     webgl=webgl)
-    range_x = p_mean.x_range
     p_mean.line(source=ds, x='timestamp', y='avg', color='black', legend='avg', line_width=2)
     p_mean.line(source=ds, x='timestamp', y='max', color='red',   legend='max',  line_width=2)
     p_mean.line(source=ds, x='timestamp', y='min', color='blue',  legend='min',  line_width=2)
@@ -391,7 +393,7 @@ def format_bokeh_plot_html(experiment, plot_type):
                y=(top+bottom)/2,
                fill_color='red', fill_alpha=0.2, line_color='red', line_alpha=0.6)
     box_r = p_mean.add_glyph(source_or_glyph=notes_ds, glyph=box)
-    box_hover = HoverTool(renderers=[box_r], tooltips='<div style="min-width: 300px;"><h4>@str_date</h4><p>@note</p></div>')
+    box_hover = HoverTool(renderers=[box_r], tooltips='<div style="width: 100px;"><h4>@str_date</h4><p>@note</p></div>')
     p_mean.add_tools(box_hover)
 
     # Grid plots (small plots, one for each well).
@@ -448,7 +450,8 @@ def format_experiment_html(experiment, plot_type):
     return t_main.format(HTMLmain_article=t_experiment.format(
         name=experiment,
         HTMLlinks=links,
-        HTMLbokeh=format_bokeh_plot_html(experiment, plot_type)
+        HTMLbokeh=format_bokeh_plot_html(experiment, plot_type),
+        HTMLnotes=format_notes_html(experiment)
         ))
 
 
