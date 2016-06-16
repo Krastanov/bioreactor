@@ -4,6 +4,7 @@ import threading
 import os.path
 
 import cherrypy
+from cherrypy._cperror import HTTPRedirect
 
 from database import db, read_experiment
 from scheduler import events
@@ -246,6 +247,11 @@ def format_archive_html():
 t_note_main = '''
 <h4>Notes</h4>
 <div class="list_notes max-height-scroll">
+<form class="pure-form" method="POST" action="do_add_note">
+    <textarea class="pure-input-1" name="note"></textarea>
+    <input type="hidden" value="{experiment_name}" name="experiment_name">
+    <button type="submit" class="button-xsmall pure-button pure-button-primary pure-input-1">Add Note</button>
+</form>
 <ul class="boxed-list">
 {notes}
 </ul>
@@ -270,7 +276,8 @@ def format_notes_html(experiment):
                               WHERE experiment_name=?
                               ORDER BY timestamp DESC''',
                            (experiment,))
-    return t_note_main.format(notes='\n'.join(t_note.format(**r) for r in notes))
+    return t_note_main.format(notes='\n'.join(t_note.format(**r) for r in notes),
+                              experiment_name=experiment)
 
 
 ###############################################################################
@@ -511,6 +518,15 @@ class Root:
         for e in prepared_events:
             s.enter(0,0,e)
         return t_main.format(main_article='<h1>New Experiment Started!</h1>')
+
+    @cherrypy.expose
+    def do_add_note(self, note, experiment_name):
+        '''Add a note to a given experiment.'''
+        with db:
+            db.execute('''INSERT INTO notes (experiment_name, note)
+                          VALUES (?, ?)''',
+                       (experiment_name, note))
+        raise HTTPRedirect(cherrypy.request.headers['Referer'])
 
 
 ###############################################################################
