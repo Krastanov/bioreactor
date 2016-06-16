@@ -480,7 +480,11 @@ class Root:
         return format_experiment_html(name, plot_type)
 
     @cherrypy.expose
-    def delete(self, table, entry):
+    def new(self):
+        return format_new_html()
+
+    @cherrypy.expose
+    def do_delete(self, table, entry):
         '''Delete an entry from a permitted table.'''
         ids = {'experiments': 'name',
                'notes'      : 'timestamp'}
@@ -488,10 +492,6 @@ class Root:
         with db:
             db.execute('''DELETE FROM %s WHERE %s=?'''%(table, primary_key),
                        (entry,))
-
-    @cherrypy.expose
-    def new(self):
-        return format_new_html()
 
     @cherrypy.expose
     def do_start_new_experiment(self, **kwargs):

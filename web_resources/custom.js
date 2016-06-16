@@ -22,7 +22,7 @@ function deleteNearestLI(arg) {
     }
 
     var http = new XMLHttpRequest();
-    var url = "/delete/"+li.id.replace("_","/");
+    var url = "/do_delete/"+li.id.replace("_","/");
     http.open("GET", url);
     http.send();
 
