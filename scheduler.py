@@ -57,26 +57,32 @@ def stop_scheduler_thread():
 # Experiment events that the scheduler can run.
 ###############################################################################
 
+# XXX All `__init__` arguments are permitted to be strings!
+
 class Event:
     pass
 
 class StartExperiment(Event):
-    def __init__(self, name, light, temp, strain, description):
+    def __init__(self, name, light, temp, strain, description,
+                 **kw):
         global current_experiment
-        self.light = light
-        self.temp = temp
         current_experiment = name
+        self.light = float(light)
+        self.temp = float(temp)
         self.strain = strain
         self.description = description
+        self.kw = kw
 
     def __call__(self):
-        logger.info('Experiment {} starting...', current_experiment)
+        logger.info('Experiment %s starting...', current_experiment)
         reactor.fill_with_media()
         reactor.set_light_input(self.light)
         with db:
-            db.execute('''INSERT INTO experiments (name, description, strain_name)
-                          VALUES (?, ?, ?)''',
-                          (current_experiment, self.description, self.strain))
+            to_record = [current_experiment, self.description, self.strain]+\
+                        [self.kw[_] for _ in ['row1', 'row2', 'row3', 'row4', 'col1', 'col2', 'col3', 'col4', 'col5']]
+            db.execute('''INSERT INTO experiments (name, description, strain_name, row1, row2, row3, row4, col1, col2, col3, col4, col5)
+                          VALUES (?, ?, ?,  ?,?,?,?, ?,?,?,?,?)''',
+                          to_record)
             light_in_data = reactor.light_input_array()
             db.execute('''INSERT INTO light_in__uEm2s (experiment_name, data)
                           VALUES (?, ?)''',
@@ -87,7 +93,7 @@ class StartExperiment(Event):
 class MeasureTemp(Event):
     '''Periodically measure the temperature of the wells.'''
     def __init__(self, delay):
-        self.delay = delay
+        self.delay = float(delay)
 
     def __call__(self):
         data = reactor.temp_array()
@@ -95,13 +101,13 @@ class MeasureTemp(Event):
             db.execute('''INSERT INTO temperature__C (experiment_name, data)
                           VALUES (?, ?)''',
                          (current_experiment, data))
-        logger.info('{} {}', type(self).__name__, data.mean())
+        logger.info('%s %s', type(self).__name__, data.mean())
         s.enter(self.delay*60,0,self)
 
 class MeasureLightOut(Event):
     '''Periodically measure the light coming out of the wells.'''
     def __init__(self, delay):
-        self.delay = delay
+        self.delay = float(delay)
 
     def __call__(self):
         data = reactor.light_out_array()
@@ -109,13 +115,13 @@ class MeasureLightOut(Event):
             db.execute('''INSERT INTO light_out__uEm2s (experiment_name, data)
                           VALUES (?, ?)''',
                          (current_experiment, data))
-        logger.info('{} {}', type(self).__name__, data.mean())
+        logger.info('%s %s', type(self).__name__, data.mean())
         s.enter(self.delay*60,0,self)
 
 class WaterFill(Event):
     '''Periodically fill up with water (for evaporative losses).'''
     def __init__(self, delay):
-        self.delay = delay
+        self.delay = float(delay)
 
     def __call__(self):
         data = reactor.fill_with_water()
@@ -123,14 +129,14 @@ class WaterFill(Event):
             db.execute('''INSERT INTO water__ml (experiment_name, data)
                           VALUES (?, ?)''',
                          (current_experiment, data))
-        logger.info('{} {}', type(self).__name__, data.mean())
+        logger.info('%s %s', type(self).__name__, data.mean())
         s.enter(self.delay*60,0,self)
 
 class DrainFill(Event):
     '''Periodically drain and refill with media.'''
     def __init__(self, delay, drain_volume):
-        self.delay = delay
-        self.drain_volume = drain_volume
+        self.delay = float(delay)
+        self.drain_volume = float(drain_volume)
 
     def __call__(self):
         reactor.drain_well(self.drain_volume)
@@ -143,15 +149,15 @@ class DrainFill(Event):
             db.execute('''INSERT INTO media__ml (experiment_name, data)
                           VALUES (?, ?)''',
                          (current_experiment, media_data))
-        logger.info('{}: drain {}, media fill {}', type(self).__name__, 'drain', drained_data.mean(), 'media fill', media_data.mean())
+        logger.info('%s: drain %s, media fill %s', type(self).__name__, 'drain', drained_data.mean(), 'media fill', media_data.mean())
         s.enter(self.delay*60,0,self)
 
 class StopExperiment(Event):
     def __call__(self):
-        logger.info('Experiment {} ending...', current_experiment)
+        logger.info('Experiment %s ending...', current_experiment)
         for event in s.queue:
             s.cancel(event)
-        logger.info('Experiment {} ended.', current_experiment)
+        logger.info('Experiment %s ended.', current_experiment)
 
 # Events that autopopulate the new experiment web page.
 events = [MeasureTemp, MeasureLightOut, WaterFill, DrainFill]
