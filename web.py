@@ -55,32 +55,32 @@ Built with nanpy, cherrypy, sqlite, bokeh, purecss, and more by Hegarty, Krastan
 
 t_new = '''
 <h1>New Experiment</h1>
-<form class="pure-form pure-form-aligned">
+<form class="pure-form pure-form-aligned" method="POST" action="do_start_new_experiment">
     <fieldset>
         <legend>General</legend>
         <div class="pure-control-group">
             <label for="name">Experiment Name</label>
-            <input id="name" type="text" placeholder="">
+            <input id="name" name="name" type="text" placeholder="">
         </div>
 
         <div class="pure-control-group">
             <label for="strain">Strain</label>
-            <input id="strain" type="text" placeholder="">
+            <input id="strain" name="strain" type="text" placeholder="">
         </div>
 
         <div class="pure-control-group">
             <label for="temp">Initial Temperature</label>
-            <input id="temp" type="text" placeholder="">
+            <input id="temp" name="temp" type="text" placeholder="">
         </div>
 
         <div class="pure-control-group">
             <label for="light">Initial Light Levels</label>
-            <input id="light" type="text" placeholder="">
+            <input id="light" name="light" type="text" placeholder="">
         </div>
 
         <div class="pure-control-group">
             <label for="description">Description</label>
-            <textarea id="description" placeholder=""></textarea>
+            <textarea id="description" name="description" placeholder=""></textarea>
         </div>
     </fieldset>
 
@@ -88,19 +88,19 @@ t_new = '''
         <legend>Well Details</legend>
         <div class="pure-control-group">
             <label for="">Row Notes</label>
-            <input id="row1" class="pure-u-1-8" type="text" placeholder="row 1">
-            <input id="row2" class="pure-u-1-8" type="text" placeholder="row 2">
-            <input id="row3" class="pure-u-1-8" type="text" placeholder="row 3">
-            <input id="row4" class="pure-u-1-8" type="text" placeholder="row 4">
+            <input id="row1" name="row1" class="pure-u-1-8" type="text" placeholder="row 1">
+            <input id="row2" name="row2" class="pure-u-1-8" type="text" placeholder="row 2">
+            <input id="row3" name="row3" class="pure-u-1-8" type="text" placeholder="row 3">
+            <input id="row4" name="row4" class="pure-u-1-8" type="text" placeholder="row 4">
         </div>
 
         <div class="pure-control-group">
             <label for="">Column Notes</label>
-            <input id="col1" class="pure-u-1-8" type="text" placeholder="col 1">
-            <input id="col2" class="pure-u-1-8" type="text" placeholder="col 2">
-            <input id="col3" class="pure-u-1-8" type="text" placeholder="col 3">
-            <input id="col4" class="pure-u-1-8" type="text" placeholder="col 4">
-            <input id="col5" class="pure-u-1-8" type="text" placeholder="col 5">
+            <input id="col1" name="col1" class="pure-u-1-8" type="text" placeholder="col 1">
+            <input id="col2" name="col2" class="pure-u-1-8" type="text" placeholder="col 2">
+            <input id="col3" name="col3" class="pure-u-1-8" type="text" placeholder="col 3">
+            <input id="col4" name="col4" class="pure-u-1-8" type="text" placeholder="col 4">
+            <input id="col5" name="col5" class="pure-u-1-8" type="text" placeholder="col 5">
         </div>
     </fieldset>
 
@@ -121,7 +121,7 @@ t_new_event = '''
 <h5>{event_name}</h5>
 <p>{event_description}</p>
 <div class="pure-controls">
-<label><input id="{event_name}_check" type="checkbox"> Include this event type!</label>
+<label><input id="{event_name}__check" name="{event_name}__check" type="checkbox"> Include this event type!</label>
 </div>
 {event_arguments}
 </div>
@@ -131,7 +131,7 @@ t_new_event = '''
 t_new_event_args = '''
 <div class="pure-control-group">
     <label for="{event_name}_{arg}">{arg}</label>
-    <input id="{event_name}_{arg}" placeholder="" type="text">
+    <input id="{event_name}_{arg}" name="{event_name}_{arg}" placeholder="" type="text">
 </div>
 '''
 
@@ -493,6 +493,24 @@ class Root:
     def new(self):
         return format_new_html()
 
+    @cherrypy.expose
+    def do_start_new_experiment(self, **kwargs):
+        '''Process the "new experiment" form and start an experiment.'''
+        def prepare_event(event, kwargs):
+            arguments = list(inspect.signature(event.__init__).parameters)[1:]
+            name = event.__name__
+            prepared_kwargs = {a: kwargs['%s_%s'%(event.__name__,a)]
+                               for a in arguments}
+            return event(**prepared_kwargs)
+        prepared_events = [prepare_event(e, kwargs) for e in events
+                           if e.__name__+'__check' in kwargs]
+        from scheduler import s, StartExperiment
+        start = StartExperiment(**kwargs)
+        start()
+        for e in prepared_events:
+            s.enter(0,0,e)
+        return t_main.format(main_article='<h1>New Experiment Started!</h1>')
+
 
 ###############################################################################
 # Configure the server with proper access to ports and static content files.
@@ -501,7 +519,9 @@ class Root:
 cherrypy.config.update({'server.socket_host': '127.0.0.1',
                         'server.socket_port': 8080,
                         'tools.encode.on'   : True,
-                        'environment': 'production',
+                        'engine.autoreload.on': False,
+                        'request.show_tracebacks': True,
+                        'request.show_mismatched_params': True,
                         'log.screen': False,
                         'log.access_file': '',
                         'log.error_file': ''
