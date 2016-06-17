@@ -29,3 +29,8 @@ Automated bioreactor for bacteria growth.
 - Temperature control is done with a PID loop in a separate (third) thread. It
   relies on `nanpy` for properly locking the serial connection resource to the
   Arduino controller.
+
+- Proper database normalization would be to have a single table with data
+  measurements with a column dedicated to measurement type, but the more naive
+  approach with multiple tables (one per measurement type) is good enough for
+  this simple project.
