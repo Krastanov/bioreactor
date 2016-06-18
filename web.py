@@ -10,7 +10,7 @@ import os.path
 import cherrypy
 from cherrypy._cperror import HTTPRedirect
 
-from database import db, read_experiment
+from database import db, read_experiment, parse_formula
 from scheduler import events
 
 logger = logging.getLogger('webinterface')
@@ -336,11 +336,13 @@ make_reader = lambda table: lambda experiment: read_experiment(experiment, table
 
 def read_OD(experiment):
     '''Prepare a dataframe of OD values.'''
-    light_in  = read_experiment(experiment, 'light_in_uEm2s')
-    light_out = read_experiment(experiment, 'light_out_uEm2s')
+    light_in  = read_experiment(experiment, 'light_in__uEm2s')
+    light_out = read_experiment(experiment, 'light_out__uEm2s')
     OD = light_in.copy()
     OD['data'] = light_out['data']/light_in['data']
-
+    formula = parse_formula(experiment, 'light_ratio_to_od_formula')
+    OD['data'] = OD['data'].apply(formula)
+    return OD
 
 # A container of all predefined plots.
 possible_plots = collections.OrderedDict([
@@ -350,7 +352,7 @@ possible_plots = collections.OrderedDict([
         ('added water'   , PlotType(make_reader('water__ml')       ,  0,  5)),
         ('added media'   , PlotType(make_reader('media__ml')       ,  0,  5)),
         ('drained volume', PlotType(make_reader('drained__ml')     ,  0,  5)),
-        ('OD'            , PlotType(make_reader('light_out__uEm2s'),  0,  3)),
+        ('OD'            , PlotType(read_OD                        ,  0,  3)),
         ])
 
 def format_bokeh_plot_html(experiment, plot_type):

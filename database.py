@@ -50,9 +50,9 @@ if new_db:
     CREATE TABLE strains (
         name TEXT PRIMARY KEY NOT NULL,
         description TEXT,
-        light_ratio_to_od_formula TEXT NOT NULL, -- not properly type checked whether it is actual python math expression
-        od_to_biomass_formula TEXT NOT NULL,
-        od_to_cell_count_formula TEXT NOT NULL
+        light_ratio_to_od_formula TEXT NOT NULL, -- XXX Not properly type checked whether
+        od_to_biomass_formula TEXT NOT NULL,     -- XXX it is actual python math expression.
+        od_to_cell_count_formula TEXT NOT NULL   -- XXX Probably formulae should go to another table.
    );
 
     -- The table of experiments ran and running on the reactor.
@@ -145,12 +145,19 @@ def read_experiment(experiment, table):
     return df
 
 def parse_formula(experiment, formula):
+    '''Return a python function corresponding to the given formula and experiment's strain.'''
+    import numpy
     with db:
         query = db.execute('''SELECT strain_name FROM experiments
-                              WHERE experiment=?''',
+                              WHERE name=?''',
                            (experiment,))
-        strain = next(query)[0]
-        query = db.execute('''SELECT ''')
+        strain = query.fetchone()[0]
+        query = db.execute('''SELECT %s FROM strains
+                              WHERE name=?'''%formula,
+                           (strain,))
+        formula = query.fetchone()[0]
+    formula = eval('lambda x:'+formula, numpy.__dict__)
+    return formula
 
 
 
