@@ -648,9 +648,10 @@ def format_addedit_strain_html(strain=None):
         with db:
             c = db.execute('''SELECT * FROM strains WHERE name=?''', (strain,))
             strain = c.fetchone()
+        return t_main.format(HTMLmain_article=t_addedit_strain.format(**strain))
     else:
         strain = collections.defaultdict(str)
-    return t_main.format(HTMLmain_article=t_addedit_strain.format_map(strain))
+        return t_main.format(HTMLmain_article=t_addedit_strain.format_map(strain))
 
 
 ###############################################################################
