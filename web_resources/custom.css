@@ -49,7 +49,7 @@ ul.boxed-list > li {
     vertical-align: bottom;
 }
 .button-trash {
-    background: rgb(202, 60, 60); /* this is a maroon */
+    background: rgb(202, 60, 60);
     color: white;
     font-size: 70%;
     float: right;
@@ -74,11 +74,31 @@ h1, h2, h3, h4, h5 {
     margin: 0;
 }
 .note {
-    font-size: 75%;
+    font-size: 70%;
     color: grey;
 }
 .timer {
     float: right;
-    font-size: 75%;
+    font-size: 70%;
     color: rgba(202, 60, 60, 0.4);
+}
+.event[data-waiting="1"] {
+    background-color: rgb(223, 117, 20);
+    border-color: rgb(223, 117, 20);
+    color: white;
+}
+.event[data-priority="-1"] {
+    background-color: rgb(202, 60, 60);
+    border-color: rgb(202, 60, 60);
+    color: white;
+}
+.current-event {
+    background-color: rgb(28, 184, 65);
+    border-color: rgb(28, 184, 65) !important;
+}
+.event > span {
+    font-size: 70%;
+}
+.current-event > span {
+    font-size: 70%;
 }

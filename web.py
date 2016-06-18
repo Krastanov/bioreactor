@@ -1,6 +1,9 @@
 import collections
+import datetime
 import html
 import inspect
+import logging
+import time
 import threading
 import os.path
 
@@ -10,6 +13,7 @@ from cherrypy._cperror import HTTPRedirect
 from database import db, read_experiment
 from scheduler import events
 
+logger = logging.getLogger('webinterface')
 
 ###############################################################################
 # HTML Template class based on `str` that can escape HTML strings.
@@ -463,21 +467,46 @@ def format_experiment_html(experiment, plot_type):
 t_status = Template('''
 <h1>Current Status</h1>
 <div class="pure-g">
-<div class="pure-u-1"><button class="pure-button button-error"> Stop </button></div>
+<div class="pure-u-1"><a class="pure-button button-error" href="/stop">Stop</a></div>
 <div class="pure-u-1">{experiment_name} ({strain}): {description}</div>
 <div class="pure-u-3-4">plots</div>
 <div class="pure-u-1-4">
-    <div>upcoming events</div>
+    <div>
+        <h4>Schedule</h4>
+        <div class="list_notes max-height-scroll">
+        <ul class="boxed-list">
+        {HTMLevents}
+        </ul>
+        </div>
+    </div>
+    <hr>
     <div>{HTMLnotes}</div>
 </div>
 </div>
 ''')
 
+# Template for presenting an event.
+t_event = Template('''
+<li class="event" data-priority="{event.priority}" data-waiting="{time[1]}">
+{event.action.__class__.__name__}<span> in <time>{time[0]}</time></span>
+</li>
+''')
+
 def format_status_html():
     '''Create a status page for the current experiment.'''
-    from scheduler import current_experiment
+    from scheduler import current_experiment, s
     if current_experiment is None:
         return t_main.format(HTMLmain_article='<h1>No Experiments Running</h1>')
+    logger.info('Generating status page for experiment %s...', current_experiment)
+    def timestr(e):
+        delta = datetime.timedelta(0, int(e.time-time.monotonic()))
+        if delta < datetime.timedelta(0):
+            return 'waiting', 1
+        else:
+            return str(delta), 0
+    events_html = '\n'.join(t_event.format(event=e, time=timestr(e)) for e in s.queue)
+    current_html = '<li class="current-event">{0.action.__class__.__name__}<span> currently</span></li>'.format(s.current) if s.current else ''
+    events_html = current_html+events_html
     with db:
         c = db.execute('''SELECT strain_name, description FROM experiments
                        WHERE name=?''',
@@ -486,6 +515,7 @@ def format_status_html():
     return t_main.format(HTMLmain_article=t_status.format(experiment_name=current_experiment,
                                                           strain=strain,
                                                           description=description,
+                                                          HTMLevents=events_html,
                                                           HTMLnotes=format_notes_html(current_experiment)))
 
 
@@ -623,6 +653,13 @@ class Root:
         return format_status_html()
 
     @cherrypy.expose
+    def stop(self):
+        from scheduler import s, StopExperiment
+        if not any(isinstance(_.action, StopExperiment) for _ in s.queue):
+            s.enter(0,-1,StopExperiment())
+        return format_status_html()
+
+    @cherrypy.expose
     def archive(self):
         return format_archive_html()
 
@@ -656,17 +693,23 @@ class Root:
     @cherrypy.expose
     def do_start_new_experiment(self, **kwargs):
         '''Process the "new experiment" form and start an experiment.'''
+        logger.info('Starting new experiment %s...', kwargs['name'])
         def prepare_event(event, kwargs):
             arguments = list(inspect.signature(event.__init__).parameters)[1:]
             name = event.__name__
             prepared_kwargs = {a: kwargs['%s_%s'%(event.__name__,a)]
                                for a in arguments}
             return event(**prepared_kwargs)
-        prepared_events = [prepare_event(e, kwargs) for e in events
-                           if e.__name__+'__check' in kwargs]
+        with db:
+            to_record = [kwargs[_] for _ in ['name', 'description', 'strain', 'row1', 'row2', 'row3', 'row4', 'col1', 'col2', 'col3', 'col4', 'col5']]
+            db.execute('''INSERT INTO experiments (name, description, strain_name, row1, row2, row3, row4, col1, col2, col3, col4, col5)
+                          VALUES (?, ?, ?,  ?,?,?,?, ?,?,?,?,?)''',
+                          to_record)
         from scheduler import s, StartExperiment
         start = StartExperiment(**kwargs)
-        start()
+        s.enter(0,-1,start)
+        prepared_events = [prepare_event(e, kwargs) for e in events
+                           if e.__name__+'__check' in kwargs]
         for e in prepared_events:
             s.enter(0,0,e)
         return t_main.format(HTMLmain_article='<h1>New Experiment Started!</h1>')

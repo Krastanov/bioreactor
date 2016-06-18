@@ -1,3 +1,4 @@
+import heapq
 import logging
 import sched
 import threading
@@ -20,14 +21,35 @@ class ResolvedScheduler(sched.scheduler):
     def __init__(self, *args, resolution=1, **kwargs):
         super().__init__(*args, **kwargs)
         self.resolution = resolution
+        self.current = None
     def run(self, blocking=True):
-        if not blocking:
-            return super().run(blocking=False)
+        # Based on the python3.5 source code.
+        lock = self._lock
+        q = self._queue
+        delayfunc = self.delayfunc
+        timefunc = self.timefunc
+        pop = heapq.heappop
         while True:
-            super().run(blocking=False)
-            self.delayfunc(self.resolution)
-            if self.empty():
-                break
+            with lock:
+                if not q:
+                    break
+                time, priority, action, argument, kwargs = current = q[0]
+                now = timefunc()
+                if time > now:
+                    delay = True
+                else:
+                    delay = False
+                    pop(q)
+            if delay:
+                if not blocking:
+                    return time - now
+                delayfunc(self.resolution)
+                continue
+            else:
+                self.current = current
+                action(*argument, **kwargs)
+                self.current = None
+                delayfunc(0)
 
 s = ResolvedScheduler()
 current_experiment = None
@@ -76,18 +98,13 @@ class StartExperiment(Event):
     def __call__(self):
         logger.info('Experiment %s starting...', current_experiment)
         reactor.fill_with_media()
-        reactor.set_light_input(self.light)
+        reactor.set_target_temp(self.temp)
         with db:
-            to_record = [current_experiment, self.description, self.strain]+\
-                        [self.kw[_] for _ in ['row1', 'row2', 'row3', 'row4', 'col1', 'col2', 'col3', 'col4', 'col5']]
-            db.execute('''INSERT INTO experiments (name, description, strain_name, row1, row2, row3, row4, col1, col2, col3, col4, col5)
-                          VALUES (?, ?, ?,  ?,?,?,?, ?,?,?,?,?)''',
-                          to_record)
+            reactor.set_light_input(self.light)
             light_in_data = reactor.light_input_array()
             db.execute('''INSERT INTO light_in__uEm2s (experiment_name, data)
                           VALUES (?, ?)''',
                          (current_experiment, light_in_data))
-        reactor.set_target_temp(self.temp)
         reactor.pause()
 
 class MeasureTemp(Event):
@@ -154,9 +171,12 @@ class DrainFill(Event):
 
 class StopExperiment(Event):
     def __call__(self):
+        global current_experiment
         logger.info('Experiment %s ending...', current_experiment)
+        # TODO Not thread safe!
         for event in s.queue:
             s.cancel(event)
+        current_experiment = None
         logger.info('Experiment %s ended.', current_experiment)
 
 # Events that autopopulate the new experiment web page.
