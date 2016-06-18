@@ -50,7 +50,7 @@ t_main = Template('''\
 <script src="/web_resources/custom.js"></script>
 </head>
 <body>
-<div id="dark_layer" class="dark-class" style="display:none"><h1>Refreshing Page<h1></div>
+<div id="dark_layer" class="dark-class" style="display:none"><h1>Refreshing Page</h1></div>
 <nav class="pure-menu pure-menu-horizontal">
     <span class="timer">Refresh in <span id="timer"></span>.</span>
     <a href="#" class="pure-menu-heading pure-menu-link">RPB</a>
@@ -233,7 +233,7 @@ t_archive_entry = Template('''
         <dt>Starting time:</dt>
         <dd><time class="list_timestamp">{timestamp:%Y-%m-%d %H:%M:%S}</time></dd>
         <dt>Strain:</dt>
-        <dd class="list_strain">{strain_name}</dd>
+        <dd class="list_strain"><a href="/strain/{strain_name}">{strain_name}</a></dd>
         </dl>
         <table class="pure-table">
         <thead><tr><th>R#</th><th>Notes</th></tr></thead>
@@ -314,14 +314,24 @@ t_experiment = Template('''
 <h1><a href="/experiment/{name}">Experiment: {name}</a></h1>
 <link rel="stylesheet" href="/web_resources/bokeh.0.11.1.min.css">
 <div class="pure-g">
-<div class="pure-u-1">
+<div class="pure-u-3-4">
+<div>
 {HTMLlinks}
 </div>
-<div class="pure-u-3-4">
+<div>
 <script src="/web_resources/bokeh.0.11.1.min.js"></script>
 {HTMLbokeh}
 </div>
+</div>
 <div class="pure-u-1-4">
+<h4>Strain</h4>
+<div>
+<a href="/strain/{strain_name}">{strain_name}</a>
+</div>
+<h4>Description</h4>
+<div class="list_notes max-height-scroll">
+{description}
+</div>
 {HTMLnotes}
 </div>
 </div>
@@ -460,11 +470,15 @@ def format_experiment_html(experiment, plot_type):
                                experiment=experiment,
                                plot_type=p)
                     for p in possible_plots.keys())
+    with db:
+        query = db.execute('''SELECT * FROM experiments WHERE name=?''',
+                           (experiment,))
+        r = query.fetchone()
     return t_main.format(HTMLmain_article=t_experiment.format(
-        name=experiment,
         HTMLlinks=links,
         HTMLbokeh=format_bokeh_plot_html(experiment, plot_type),
-        HTMLnotes=format_notes_html(experiment)
+        HTMLnotes=format_notes_html(experiment),
+        **r
         ))
 
 
@@ -476,7 +490,7 @@ t_status = Template('''
 <h1>Current Status</h1>
 <div class="pure-g">
 <div class="pure-u-1"><a class="pure-button button-error" href="/stop">Stop</a></div>
-<div class="pure-u-1">{experiment_name} ({strain}): {description}</div>
+<div class="pure-u-1"><a href="/experiment/{experiment_name}">{experiment_name}</a> (<a href="/strain/{strain}">{strain}</a>): {description}</div>
 <div class="pure-u-3-4">plots</div>
 <div class="pure-u-1-4">
     <div>
