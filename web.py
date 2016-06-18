@@ -39,11 +39,11 @@ t_main = Template('''\
 <link rel="stylesheet" href="/web_resources/font-awesome.4.6.3.min.css">
 <link rel="stylesheet" href="/web_resources/custom.css">
 <script src="/web_resources/custom.js"></script>
-<script>reloadTimeout();</script>
 </head>
 <body>
 <div id="dark_layer" class="dark-class" style="display:none"><h1>Refreshing Page<h1></div>
 <nav class="pure-menu pure-menu-horizontal">
+    <span class="timer">Refresh in <span id="timer"></span>.</span>
     <a href="#" class="pure-menu-heading pure-menu-link">RPB</a>
     <ul class="pure-menu-list">
         <li class="pure-menu-item"><a href="/"        class="pure-menu-link">Status</a></li>
@@ -51,6 +51,7 @@ t_main = Template('''\
         <li class="pure-menu-item"><a href="/archive" class="pure-menu-link">Archive</a></li>
         <li class="pure-menu-item"><a href="/strains" class="pure-menu-link">Strains</a></li>
     </ul>
+    <script>reloadTimeout();</script>
 </nav>
 <article class="pure-g">
 <div class="pure-u-1">

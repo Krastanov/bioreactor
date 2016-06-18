@@ -3,16 +3,23 @@ function reloadTimeout() {
     window.onload = resetTimer;
     document.onmousemove = resetTimer;
     document.onkeypress = resetTimer;
-
-    function refresh() {
-        document.getElementById("dark_layer").style.display = "";
-        location.reload();
-    }
+    var timerhtml = document.getElementById("timer");
+    var counter = 10*60+1;
 
     function resetTimer() {
-        clearTimeout(t);
-        t = setTimeout(refresh, 10*60*1000);
+        counter = 10*60+1;
     }
+
+    function countdown() {
+        counter = counter - 1;
+        timerhtml.innerHTML = `${(counter-counter%60)/60}m${counter%60}s`;
+        if (counter==0) {
+            document.getElementById("dark_layer").style.display = "";
+            location.reload();
+        }
+    }
+
+    setInterval(countdown, 1000)
 };
 
 function deleteNearestLI(arg) {
