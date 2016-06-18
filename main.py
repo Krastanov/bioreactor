@@ -63,6 +63,7 @@ logger = logging.getLogger()
 # Starting all threads.
 ###############################################################################
 import time
+import webbrowser
 
 from web import start_web_interface_thread, stop_web_interface_thread
 from scheduler import start_scheduler_thread, stop_scheduler_thread
@@ -74,6 +75,7 @@ def report(*threads):
 logger.info('Starting all threads...')
 scheduler_thread = start_scheduler_thread()
 web_interface_thread = start_web_interface_thread()
+webbrowser.open('http://localhost:8080', new=1, autoraise=True)
 try:
     while True:
         logger.info(report(web_interface_thread,
