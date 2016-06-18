@@ -315,9 +315,11 @@ t_experiment = Template('''
 <link rel="stylesheet" href="/web_resources/bokeh.0.11.1.min.css">
 <div class="pure-g">
 <div class="pure-u-3-4">
-<div>
+<form class="pure-form">
+<div class="pure-g">
 {HTMLlinks}
 </div>
+</form>
 <div>
 <script src="/web_resources/bokeh.0.11.1.min.js"></script>
 {HTMLbokeh}
@@ -354,6 +356,20 @@ def read_OD(experiment):
     OD['data'] = OD['data'].apply(formula)
     return OD
 
+def read_cell_count(experiment):
+    '''Prepare a dataframe of biomass values.'''
+    OD = read_OD(experiment)
+    formula = parse_formula(experiment, 'od_to_cell_count_formula')
+    OD['data'] = OD['data'].apply(formula)
+    return OD
+
+def read_biomass(experiment):
+    '''Prepare a dataframe of biomass values.'''
+    OD = read_OD(experiment)
+    formula = parse_formula(experiment, 'od_to_biomass_formula')
+    OD['data'] = OD['data'].apply(formula)
+    return OD
+
 # A container of all predefined plots.
 possible_plots = collections.OrderedDict([
         ('light in'      , PlotType(make_reader('light_in__uEm2s') ,  0,  3)),
@@ -363,6 +379,8 @@ possible_plots = collections.OrderedDict([
         ('added media'   , PlotType(make_reader('media__ml')       ,  0,  5)),
         ('drained volume', PlotType(make_reader('drained__ml')     ,  0,  5)),
         ('OD'            , PlotType(read_OD                        ,  0,  3)),
+        ('cell count'    , PlotType(read_cell_count                ,  0,  3)),
+        ('biomass'       , PlotType(read_biomass                   ,  0,  3)),
         ])
 
 def format_bokeh_plot_html(experiment, plot_type):
@@ -465,11 +483,11 @@ def format_bokeh_plot_html(experiment, plot_type):
 
 def format_experiment_html(experiment, plot_type):
     '''Load all data for a given experiment, make bokeh plots, and load in the HTML template.'''
-    links = ''.join('''<a class='pure-button {button_type}' href='/experiment/{experiment}/{plot_type}'>{plot_type}</a>
-                    '''.format(button_type='pure-button-active' if p==plot_type else '',
-                               experiment=experiment,
-                               plot_type=p)
-                    for p in possible_plots.keys())
+    links = '\n'.join('''<div class="pure-u-1-5"><a class="pure-input-1 pure-button {button_type}" href="/experiment/{experiment}/{plot_type}">{plot_type}</a></div>
+                      '''.format(button_type='pure-button-active' if p==plot_type else '',
+                                 experiment=experiment,
+                                 plot_type=p)
+                      for p in possible_plots.keys())
     with db:
         query = db.execute('''SELECT * FROM experiments WHERE name=?''',
                            (experiment,))
