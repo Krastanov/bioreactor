@@ -518,6 +518,7 @@ var options = {{
 
 var strainsList = new List('strains', options);
 </script>
+<script src="/web_resources/ASCIIMathML.2.2.js"></script>
 ''')
 
 # A template for an entry in the list of strains.
@@ -538,11 +539,11 @@ t_strains_entry = Template('''
         <div class="list_formulae max-height-scroll">
         <dl>
             <dt>Output/Input Light Intensity Ratio to Optical Density:</dt>
-            <dd>{light_ratio_to_od_formula}</dd>
+            <dd>`color(black)({light_ratio_to_od_formula})`</dd>
             <dt>Optical Density to Biomass</dt>
-            <dd>{od_to_biomass_formula}</dd>
+            <dd>`color(black)({od_to_biomass_formula})`</dd>
             <dt>Optical Density to Cell Count</dt>
-            <dd>{od_to_cell_count_formula}</dd>
+            <dd>`color(black)({od_to_cell_count_formula})`</dd>
         </dl>
         </div>
     </div>
@@ -552,7 +553,9 @@ t_strains_entry = Template('''
 def format_strains_html():
     '''Load all strains from the database and list them in the HTML template.'''
     with db:
-        entries = '\n'.join(t_strains_entry.format(**r)
+        translate_power_sign = lambda _: {k: _[k].replace('**', '^') if _[k] and k not in ('name', 'description') else _[k]
+                                          for k in _.keys()}
+        entries = '\n'.join(t_strains_entry.format(**translate_power_sign(r))
                             for r in db.execute('''SELECT * FROM strains
                                                    ORDER BY name ASC'''))
     return t_main.format(HTMLmain_article=t_strains.format(HTMLstrains_entries=entries))
