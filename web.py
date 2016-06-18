@@ -49,7 +49,7 @@ t_main = Template('''\
         <li class="pure-menu-item"><a href="/"        class="pure-menu-link">Status</a></li>
         <li class="pure-menu-item"><a href="/new"     class="pure-menu-link">New Experiment</a></li>
         <li class="pure-menu-item"><a href="/archive" class="pure-menu-link">Archive</a></li>
-        <li class="pure-menu-item"><a href="/strains" class="pure-menu-link">Strain</a></li>
+        <li class="pure-menu-item"><a href="/strains" class="pure-menu-link">Strains</a></li>
     </ul>
 </nav>
 <article class="pure-g">
@@ -489,6 +489,127 @@ def format_status_html():
 
 
 ###############################################################################
+# The list of strains template.
+###############################################################################
+
+t_strains = Template('''
+<h1>Strains</h1>
+<script src="/web_resources/list.1.2.0.min.js"></script>
+<div id='strains'>
+<div>
+    <form class="pure-form">
+    <fieldset>
+    <legend>Search strains:</legend>
+    <input class="list_search" placeholder="Search">
+    </fieldset>
+    </form>
+</div>
+<ul class='list_list boxed-list'>
+{HTMLstrains_entries}
+</ul>
+</div>
+<script>
+var options = {{
+  valueNames: [ 'list_name', 'list_description' ],
+  listClass: 'list_list',
+  searchClass: 'list_search'
+}};
+
+var strainsList = new List('strains', options);
+</script>
+''')
+
+# A template for an entry in the list of strains.
+t_strains_entry = Template('''
+<li class="pure-g fixed-height-block" id="strains_{name}">
+    <div class="pure-u-11-12">
+        <h3 class="list_name"><a href="/strain/{name}">{name}</a></h3>
+    </div>
+    <div class="pure-u-1-12">
+        <button class="button-trash pure-button" onClick="deleteNearestLI(this);"><i class="fa fa-trash"></i></button>
+    </div>
+    <div class="pure-u-1-3">
+        <h4>Description</h4>
+        <div class="list_description max-height-scroll">{description}</div>
+    </div>
+    <div class="pure-u-2-3">
+        <h4>Formulae</h4>
+        <div class="list_formulae max-height-scroll">
+        <dl>
+            <dt>Output/Input Light Intensity Ratio to Optical Density:</dt>
+            <dd>{light_ratio_to_od_formula}</dd>
+            <dt>Optical Density to Biomass</dt>
+            <dd>{od_to_biomass_formula}</dd>
+            <dt>Optical Density to Cell Count</dt>
+            <dd>{od_to_cell_count_formula}</dd>
+        </dl>
+        </div>
+    </div>
+</li>
+''')
+
+def format_strains_html():
+    '''Load all strains from the database and list them in the HTML template.'''
+    with db:
+        entries = '\n'.join(t_strains_entry.format(**r)
+                            for r in db.execute('''SELECT * FROM strains
+                                                   ORDER BY name ASC'''))
+    return t_main.format(HTMLmain_article=t_strains.format(HTMLstrains_entries=entries))
+
+
+###############################################################################
+# Template for adding or editing a strain.
+###############################################################################
+
+t_addedit_strain = Template('''
+<h1>Add or Edit a Strains</h1>
+<form class="pure-form pure-form-aligned" method="POST" action="/do_addedit_strain">
+    <fieldset>
+        <legend>General</legend>
+        <div class="pure-control-group">
+            <label for="name">Strain Name<sup class="note">[1]</sup></label>
+            <input id="name" name="name" type="text" placeholder="" value="{name}">
+        </div>
+
+        <div class="pure-control-group">
+            <label for="description">Description</label>
+            <textarea id="description" name="description" placeholder="">{description}</textarea>
+        </div>
+    <p class="note">[1]: Change the name to create a new strain based on a previous one.</p>
+    </fieldset>
+
+    <fieldset>
+        <legend>Formulae</legend>
+        <div class="pure-control-group">
+            <label for="light_ratio_to_od_formula">Output/Input Light Intensity Ratio to Optical Density:</label>
+            <input id="light_ratio_to_od_formula" name="light_ratio_to_od_formula" type="text" placeholder="" value="{light_ratio_to_od_formula}">
+        </div>
+        <div class="pure-control-group">
+            <label for="od_to_biomass_formula">Optical Density to Biomass</label>
+            <input id="od_to_biomass_formula" name="od_to_biomass_formula" type="text" placeholder="" value="{od_to_biomass_formula}">
+        </div>
+        <div class="pure-control-group">
+            <label for="od_to_cell_count_formula">Optical Density to Cell Count</label>
+            <input id="od_to_cell_count_formula" name="od_to_cell_count_formula" type="text" placeholder="" value="{od_to_cell_count_formula}">
+        </div>
+    </fieldset>
+
+    <div class="pure-controls">
+        <button type="submit" class="pure-button pure-button-primary">Submit Changes</button>
+    </div>
+</form>
+''')
+
+def format_addedit_strain_html(strain=None):
+    '''Load a strain in an edit page or show a "new strain" page.'''
+    if strain:
+        with db:
+            c = db.execute('''SELECT * FROM strains WHERE name=?''', (strain,))
+            strain = c.fetchone()
+    return t_main.format(HTMLmain_article=t_addedit_strain.format(**strain))
+
+
+###############################################################################
 # The UI server implementation.
 ###############################################################################
 
@@ -510,9 +631,18 @@ class Root:
         return format_new_html()
 
     @cherrypy.expose
+    def strains(self):
+        return format_strains_html()
+
+    @cherrypy.expose
+    def strain(self, strain=None):
+        return format_addedit_strain_html(strain)
+
+    @cherrypy.expose
     def do_delete(self, table, entry):
         '''Delete an entry from a permitted table.'''
         ids = {'experiments': 'name',
+               'strains'    : 'name',
                'notes'      : 'timestamp'}
         primary_key = ids[table]
         with db:
@@ -544,6 +674,29 @@ class Root:
             db.execute('''INSERT INTO notes (experiment_name, note)
                           VALUES (?, ?)''',
                        (experiment_name, note))
+
+    @cherrypy.expose
+    def do_addedit_strain(self, name, description, light_ratio_to_od_formula,
+            od_to_biomass_formula, od_to_cell_count_formula):
+        with db:
+            db.execute('''UPDATE OR IGNORE strains
+                          SET description=?,
+                              light_ratio_to_od_formula=?,
+                              od_to_biomass_formula=?,
+                              od_to_cell_count_formula=?
+                          WHERE name=?''',
+                       (description, light_ratio_to_od_formula,
+                        od_to_biomass_formula, od_to_cell_count_formula,
+                        name))
+            db.execute('''INSERT OR IGNORE INTO strains
+                          (name, description,
+                           light_ratio_to_od_formula,
+                           od_to_biomass_formula,
+                           od_to_cell_count_formula)
+                          VALUES (?, ?, ?, ?, ?)''',
+                       (name, description, light_ratio_to_od_formula,
+                        od_to_biomass_formula, od_to_cell_count_formula))
+        return t_main.format(HTMLmain_article='<h1>Strain Changes Commited!</h1>')
 
 
 ###############################################################################

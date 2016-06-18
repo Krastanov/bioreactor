@@ -23,9 +23,11 @@ function deleteNearestLI(arg) {
 
     var http = new XMLHttpRequest();
     var url = "/do_delete";
+    var table = li.id.split('_')[0];
+    var entry = li.id.replace(table+'_','');
     http.open("POST", url);
     http.setRequestHeader("Content-type", "application/x-www-form-urlencoded");
-    http.send(`table=${li.id.split('_')[0]}&entry=${li.id.split('_')[1]}`);
+    http.send(`table=${table}&entry=${entry}`);
 
     li.remove();
 }
