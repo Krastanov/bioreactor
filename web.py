@@ -87,27 +87,29 @@ t_new = Template('''
         <legend>General</legend>
         <div class="pure-control-group">
             <label for="name">Experiment Name</label>
-            <input id="name" name="name" type="text" placeholder="">
+            <input id="name" name="name" type="text" placeholder="" class="pure-input-1-4">
         </div>
 
         <div class="pure-control-group">
             <label for="strain">Strain</label>
-            <input id="strain" name="strain" type="text" placeholder="">
+            <select id="strain" name="strain" type="text" placeholder="" class="pure-input-1-4">
+            {HTMLstrainoptions}
+            </select>
         </div>
 
         <div class="pure-control-group">
             <label for="temp">Initial Temperature</label>
-            <input id="temp" name="temp" type="text" placeholder="">
+            <input id="temp" name="temp" type="text" placeholder="" class="pure-input-1-4">
         </div>
 
         <div class="pure-control-group">
             <label for="light">Initial Light Levels</label>
-            <input id="light" name="light" type="text" placeholder="">
+            <input id="light" name="light" type="text" placeholder="" class="pure-input-1-4">
         </div>
 
         <div class="pure-control-group">
             <label for="description">Description</label>
-            <textarea id="description" name="description" placeholder=""></textarea>
+            <textarea id="description" name="description" placeholder="" class="pure-input-1-4"></textarea>
         </div>
     </fieldset>
 
@@ -178,7 +180,11 @@ def format_new_html():
                              event_description=e.__doc__,
                              HTMLevent_arguments=format_event_arguments(e))
                            for e in events])
-    return t_main.format(HTMLmain_article=t_new.format(HTMLevents=events_html))
+    with db:
+        strainoptions_html=''.join('''<option value="{name}">{name}</option>'''.format(**r)
+                                   for r in db.execute('SELECT name FROM strains ORDER BY name ASC'))
+    return t_main.format(HTMLmain_article=t_new.format(HTMLevents=events_html,
+                                                       HTMLstrainoptions=strainoptions_html))
 
 
 ###############################################################################
