@@ -1,12 +1,47 @@
-body{
+body {
     min-width:1220px;
     width: auto !important;
+    display: flex;
+    min-height: 100vh;
+    flex-direction: column;
+}
+body > article {
+    flex: 1
+
 }
 .pure-g > div {
     box-sizing: border-box;
     padding: 0.5em;
 }
-ul, li {
+h1, h2, h3, h4, h5 {
+    margin: 0;
+}
+sup.note {
+    font-size: 70%;
+    color: grey;
+}
+#timertext {
+    float: right;
+    font-size: 70%;
+    color: rgba(202, 60, 60, 0.4);
+}
+#dark_layer {
+    display: none;
+    background-color: rgba(202, 60, 60, 0.4);;
+    z-index: 1000;
+    height: 100%;
+    width: 100%;
+    background-repeat:no-repeat;
+    background-position:center;
+    position:absolute;
+    top: 0px;
+    left: 0px;
+}
+#dark_layer > * {
+    text-align: center;
+    color: darkred;
+}
+ul.boxed-list {
     list-style-type: none;
     margin: 0;
     padding: 0;
@@ -14,6 +49,26 @@ ul, li {
 ul.boxed-list > li {
     border-radius: 4px;
     border: 1px solid gray;
+}
+li.event[data-waiting="1"] {
+    background-color: rgb(223, 117, 20);
+    border-color: rgb(223, 117, 20);
+    color: white;
+}
+li.event[data-priority="-1"] {
+    background-color: rgb(202, 60, 60);
+    border-color: rgb(202, 60, 60);
+    color: white;
+}
+li.current-event {
+    background-color: rgb(28, 184, 65);
+    border-color: rgb(28, 184, 65) !important;
+}
+li.event > span {
+    font-size: 70%;
+}
+li.current-event > span {
+    font-size: 70%;
 }
 .max-height-scroll {
     overflow-y: auto;
@@ -54,51 +109,4 @@ ul.boxed-list > li {
     font-size: 70%;
     float: right;
     border-radius: 4px;
-}
-.dark-class {
-    background-color: rgba(202, 60, 60, 0.4);;
-    z-index: 1000;
-    height: 100%;
-    width: 100%;
-    background-repeat:no-repeat;
-    background-position:center;
-    position:absolute;
-    top: 0px;
-    left: 0px;
-}
-.dark-class > * {
-    text-align: center;
-    color: darkred;
-}
-h1, h2, h3, h4, h5 {
-    margin: 0;
-}
-.note {
-    font-size: 70%;
-    color: grey;
-}
-.timer {
-    float: right;
-    font-size: 70%;
-    color: rgba(202, 60, 60, 0.4);
-}
-.event[data-waiting="1"] {
-    background-color: rgb(223, 117, 20);
-    border-color: rgb(223, 117, 20);
-    color: white;
-}
-.event[data-priority="-1"] {
-    background-color: rgb(202, 60, 60);
-    border-color: rgb(202, 60, 60);
-    color: white;
-}
-.current-event {
-    background-color: rgb(28, 184, 65);
-    border-color: rgb(28, 184, 65) !important;
-}
-.event > span {
-    font-size: 70%;
-}
-.current-event > span {
-    font-size: 70%;
 }

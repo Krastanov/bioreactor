@@ -50,9 +50,9 @@ t_main = Template('''\
 <script src="/web_resources/custom.js"></script>
 </head>
 <body>
-<div id="dark_layer" class="dark-class" style="display:none"><h1>Refreshing Page</h1></div>
+<div id="dark_layer"><h1>Refreshing Page</h1></div>
 <nav class="pure-menu pure-menu-horizontal">
-    <span class="timer">Refresh in <span id="timer"></span>.</span>
+    <span id="timertext">Refresh in <span id="timer"></span>.</span>
     <a href="#" class="pure-menu-heading pure-menu-link">RPB</a>
     <ul class="pure-menu-list">
         <li class="pure-menu-item"><a href="/"        class="pure-menu-link">Status</a></li>
@@ -649,7 +649,7 @@ t_addedit_strain = Template('''
             <label for="description">Description</label>
             <textarea id="description" name="description" placeholder="">{description}</textarea>
         </div>
-    <p class="note">[1]: Change the name to create a new strain based on a previous one.</p>
+    <sup class="note">[1]: Change the name to create a new strain based on a previous one.</sup>
     </fieldset>
 
     <fieldset>
