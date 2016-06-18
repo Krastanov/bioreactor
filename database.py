@@ -1,9 +1,12 @@
 import io
+import logging
 import os.path
 import sqlite3
 
 import numpy as np
 import pandas as pd
+
+logger = logging.getLogger('database')
 
 
 ###############################################################################
@@ -40,6 +43,7 @@ db = sqlite3.connect(db_file, detect_types=sqlite3.PARSE_DECLTYPES, check_same_t
 db.row_factory = sqlite3.Row
 db.execute('PRAGMA foreign_keys = ON;')
 if new_db:
+    logger.info('No database file detected. Preparing a new one...')
     db.executescript('''
 
     -- Strain that the reactor knows how to work with.
@@ -156,6 +160,7 @@ def parse_formula(experiment, formula):
 
 def add_mock_data():
     '''Generate a mock strain and experiments and add data points to each.'''
+    logger.info('Populating the database with mock data...')
     import datetime
     import numpy as np
     now = datetime.datetime.now()
@@ -167,6 +172,12 @@ def add_mock_data():
         db.execute('''INSERT INTO strains (name, light_ratio_to_od_formula,
                                            od_to_biomass_formula, od_to_cell_count_formula)
                       VALUES ('mock_strain', '-log(x)', 'x', 'x')''')
+        db.execute('''INSERT INTO strains (name, light_ratio_to_od_formula,
+                                           od_to_biomass_formula,
+                                           od_to_cell_count_formula,
+                                           description)
+                      VALUES ('another_mock_strain', '-log(x)+1', 'x**2', 'x/2', ?)''',
+                   (lorem_ipsum,))
         for m in range(5):
             db.execute('''INSERT INTO experiments (name, description, strain_name, timestamp)
                           VALUES (?, ?, 'mock_strain', ?)''',
@@ -201,8 +212,10 @@ def add_mock_data():
 
 def del_mock_data():
     '''Delete the mock data (relies on automatic CASCADEing).'''
+    logger.info('Removing mock data from the database...')
     with db:
         db.execute('''DELETE FROM strains WHERE name='mock_strain' ''')
+        db.execute('''DELETE FROM strains WHERE name='another_mock_strain' ''')
 
 lorem_ipsum = '''
 Lorem ipsum dolor sit amet, consectetur adipiscing elit. Ut placerat tristique
