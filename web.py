@@ -18,15 +18,20 @@ logger = logging.getLogger('webinterface')
 ###############################################################################
 # HTML Template class based on `str` that can escape HTML strings.
 ###############################################################################
-# XXX Should have used actuall templating library.
+# XXX Should have used actuall templating library. This is fairly ugly.
 class Template(str):
     '''HTML escape all strings in `format` except keyword arguments starting with "HTML".'''
-    def format(self, *args, **kwargs):
+    def format(self, *args, **kwargs): # XXX Fancy formaters (everything except `str`) is not protected.
         args = (html.escape(_) if isinstance(_, str) else _
                 for _ in args)
         kwargs = {k: html.escape(_) if (isinstance(_, str) and not k.startswith('HTML')) else _
                   for k, _ in kwargs.items()}
         return super().format(*args, **kwargs)
+    def format_map(self, kwargs): # XXX Containers like defaultdict are not fully protected here.
+        for k, v in kwargs.items():
+            if (isinstance(v, str) and not k.startswith('HTML')):
+                kwargs[k] = html.escape(v)
+        return super().format_map(kwargs)
 
 
 ###############################################################################
@@ -54,6 +59,7 @@ t_main = Template('''\
         <li class="pure-menu-item"><a href="/new"     class="pure-menu-link">New Experiment</a></li>
         <li class="pure-menu-item"><a href="/archive" class="pure-menu-link">Archive</a></li>
         <li class="pure-menu-item"><a href="/strains" class="pure-menu-link">Strains</a></li>
+        <li class="pure-menu-item"><a href="/strain"  class="pure-menu-link">New Strain</a></li>
     </ul>
     <script>reloadTimeout();</script>
 </nav>
@@ -640,7 +646,9 @@ def format_addedit_strain_html(strain=None):
         with db:
             c = db.execute('''SELECT * FROM strains WHERE name=?''', (strain,))
             strain = c.fetchone()
-    return t_main.format(HTMLmain_article=t_addedit_strain.format(**strain))
+    else:
+        strain = collections.defaultdict(str)
+    return t_main.format(HTMLmain_article=t_addedit_strain.format_map(strain))
 
 
 ###############################################################################
