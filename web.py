@@ -16,7 +16,7 @@ from bokeh.models import ColumnDataSource, Range1d, Rect, HoverTool
 from bokeh.plotting import figure
 
 from database import db
-from dataprocessing import possible_plots, read_plottype, read_experiment
+from dataprocessing import possible_plots, read_plottype, read_experiment, read_all_plottypes
 from scheduler import events
 
 logger = logging.getLogger('webinterface')
@@ -338,6 +338,13 @@ t_experiment = Template('''
 </div>
 </div>
 <div class="pure-u-1-4">
+<form class="pure-form">
+<fieldset class="pure-group">
+<a class="pure-input-1 pure-button pure-button-primary" href="/table/{name}">View Table</a>
+<a class="pure-input-1 pure-button pure-button-primary" href="/downloadcsv/{name}?interpolate=False">Download CSV</a>
+<a class="pure-input-1 pure-button pure-button-primary" href="/downloadcsv/{name}?interpolate=True">Download CSV (interpolated)</a>
+</fieldset>
+</form>
 <h4>Strain</h4>
 <div>
 <a href="/strain/{strain_name}">{strain_name}</a>
@@ -642,6 +649,33 @@ def format_addedit_strain_html(strain=None):
 
 
 ###############################################################################
+# Template for data tables.
+###############################################################################
+
+t_table = Template('''
+<h1>Data Table with interpolated values</h1>
+<h2>{experiment}</h2>
+<form class="pure-form">
+<div class="pure-g">
+<div class="pure-u-1-4">
+<a class="pure-input-1 pure-button pure-button-primary" href="/downloadcsv/{experiment}?interpolate=True">Download CSV (interpolated)</a>
+</div>
+<div class="pure-u-1-4">
+<a class="pure-input-1 pure-button pure-button-primary" href="/downloadcsv/{experiment}?interpolate=False">Download CSV</a>
+</div>
+</div>
+</form>
+{HTMLtable}
+''')
+
+def format_table(experiment):
+    '''Display a data table as HTML.'''
+    table_html = read_all_plottypes(experiment, interpolate=True).to_html()
+    return t_main.format(HTMLmain_article=t_table.format(experiment=experiment,
+                                                         HTMLtable=table_html))
+
+
+###############################################################################
 # The UI server implementation.
 ###############################################################################
 
@@ -676,6 +710,10 @@ class Root:
     @cherrypy.expose
     def strain(self, strain=None):
         return format_addedit_strain_html(strain)
+
+    @cherrypy.expose
+    def table(self, experiment):
+        return format_table(experiment)
 
     @cherrypy.expose
     def do_delete(self, table, entry):
