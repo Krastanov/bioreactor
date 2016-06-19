@@ -10,7 +10,13 @@ import os.path
 import cherrypy
 from cherrypy._cperror import HTTPRedirect
 
-from database import db, read_experiment, parse_formula
+from bokeh.embed import components
+from bokeh.io import gridplot, vplot, hplot
+from bokeh.models import ColumnDataSource, Range1d, Rect, HoverTool
+from bokeh.plotting import figure
+
+from database import db
+from dataprocessing import possible_plots, read_plottype, read_experiment
 from scheduler import events
 
 logger = logging.getLogger('webinterface')
@@ -345,70 +351,13 @@ t_experiment = Template('''
 </div>
 ''')
 
-# A convenient container for everything necessary to define a plot.
-PlotType = collections.namedtuple('PlotType', ['reader', 'min', 'max'])
-
-# Most of the database-to-dataframe functions need to read a single table,
-# so we are making a function that returns such reader functions.
-make_reader = lambda table: lambda experiment: read_experiment(experiment, table)
-
-def read_OD(experiment):
-    '''Prepare a dataframe of OD values.'''
-    light_in  = read_experiment(experiment, 'light_in__uEm2s')
-    light_out = read_experiment(experiment, 'light_out__uEm2s')
-    OD = light_in.copy()
-    OD['data'] = light_out['data']/light_in['data']
-    formula = parse_formula(experiment, 'light_ratio_to_od_formula')
-    OD['data'] = OD['data'].apply(formula)
-    return OD
-
-def read_cell_count(experiment):
-    '''Prepare a dataframe of biomass values.'''
-    OD = read_OD(experiment)
-    formula = parse_formula(experiment, 'od_to_cell_count_formula')
-    OD['data'] = OD['data'].apply(formula)
-    return OD
-
-def read_biomass(experiment):
-    '''Prepare a dataframe of biomass values.'''
-    OD = read_OD(experiment)
-    formula = parse_formula(experiment, 'od_to_biomass_formula')
-    OD['data'] = OD['data'].apply(formula)
-    return OD
-
-# A container of all predefined plots.
-possible_plots = collections.OrderedDict([
-        ('light in'      , PlotType(make_reader('light_in__uEm2s') ,  0,  3)),
-        ('light out'     , PlotType(make_reader('light_out__uEm2s'),  0,  3)),
-        ('temperature'   , PlotType(make_reader('temperature__C')  , 20, 40)),
-        ('added water'   , PlotType(make_reader('water__ml')       ,  0,  5)),
-        ('added media'   , PlotType(make_reader('media__ml')       ,  0,  5)),
-        ('drained volume', PlotType(make_reader('drained__ml')     ,  0,  5)),
-        ('OD'            , PlotType(read_OD                        ,  0,  3)),
-        ('cell count'    , PlotType(read_cell_count                ,  0,  3)),
-        ('biomass'       , PlotType(read_biomass                   ,  0,  3)),
-        ])
-
 def format_bokeh_plot_html(experiment, plot_type):
     '''Generate the HTML for a given experiment/plot combination.'''
-    import itertools
-    from bokeh.embed import components
-    from bokeh.io import gridplot, vplot, hplot
-    from bokeh.models import ColumnDataSource, Range1d, Rect, HoverTool
-    from bokeh.plotting import figure
     plot_type = possible_plots[plot_type]
 
     # Prepare the data.
-    df = plot_type.reader(experiment)
-    for r,c in itertools.product(range(4),range(5)):
-        df[str((r,c))]=df['data'].apply(lambda _:_[r,c])
-    for r in range(4):
-        df['r%d'%r] = df['data'].apply(lambda _:_[r,:].mean())
-    for c in range(5):
-        df['c%d'%c] = df['data'].apply(lambda _:_[:,c].mean())
-    df['avg'] = df['data'].apply(lambda _:_.mean())
-    df['min'] = df['data'].apply(lambda _:_.min())
-    df['max'] = df['data'].apply(lambda _:_.max())
+    df = read_plottype(experiment, plot_type)
+    df['timestamp'] = df.index # TODO XXX This is an abomination!
     ds = ColumnDataSource(df)
 
     # Summary plot (average over all wells).
@@ -416,15 +365,15 @@ def format_bokeh_plot_html(experiment, plot_type):
     webgl = False
     bottom = min(df['min'].min(), plot_type.min)
     top    = max(df['max'].max(), plot_type.max)
-    left   = df['timestamp'].min()
-    right  = df['timestamp'].max()
+    left   = df.index.min()
+    right  = df.index.max()
     range_y = Range1d(bottom, top)
     range_x = Range1d(left, right)
     p_mean = figure(width=350, height=350, x_axis_type='datetime',
 		    toolbar_location=None, tools=tools,
                     x_range=range_x, y_range=range_y,
                     webgl=webgl)
-    p_mean.line(source=ds, x='timestamp', y='avg', color='black', legend='avg', line_width=2)
+    p_mean.line(source=ds, x='timestamp', y='median', color='black', legend='median', line_width=2)
     p_mean.line(source=ds, x='timestamp', y='max', color='red',   legend='max',  line_width=2)
     p_mean.line(source=ds, x='timestamp', y='min', color='blue',  legend='min',  line_width=2)
     p_mean.border_fill_color = "white"
@@ -432,10 +381,10 @@ def format_bokeh_plot_html(experiment, plot_type):
 
     # Add hover notes to the summary plot.
     notes = read_experiment(experiment, 'notes')
-    notes['str_date'] = notes['timestamp'].apply(lambda _:_.strftime('%Y-%m-%d %H:%M:%S'))
+    notes['str_date'] = notes.index.map(lambda _:_.strftime('%Y-%m-%d %H:%M:%S'))
     notes_ds = ColumnDataSource(notes)
     box = Rect(height=top-bottom,
-               width=(df['timestamp'].max()-df['timestamp'].min()).total_seconds()*1e3/20,
+               width=(df.index.max()-df.index.min()).total_seconds()*1e3/20+30*60*1e3,
                x='timestamp',
                y=(top+bottom)/2,
                fill_color='red', fill_alpha=0.2, line_color='red', line_alpha=0.6)
@@ -445,9 +394,9 @@ def format_bokeh_plot_html(experiment, plot_type):
 
     # Grid plots (small plots, one for each well).
     plots = []
-    for r in range(4):
+    for r in range(1,5):
         cols = []
-        for c in range(5):
+        for c in range(1,6):
             p = figure(width=100, height=100, x_axis_type='datetime',
         	       min_border_top=2, min_border_right=2,
         	       min_border_bottom=20, min_border_left=20,
@@ -455,7 +404,7 @@ def format_bokeh_plot_html(experiment, plot_type):
         	       tools=tools,
         	       x_range=range_x, y_range=range_y,
                        webgl=webgl)
-            p.line(source=ds, x='timestamp', y=str((r,c)))
+            p.line(source=ds, x='timestamp', y='%s%s'%(r,c))
             p.xaxis.major_label_orientation = 3.14/4
             p.xaxis.major_label_text_font_size = '0.6em'
             p.yaxis.major_label_text_font_size = '0.6em'
@@ -469,8 +418,8 @@ def format_bokeh_plot_html(experiment, plot_type):
 		    toolbar_location=None, tools=tools,
 		    x_range=range_x, y_range=range_y,
                     webgl=webgl)
-    for r in range(4):
-        p_rows.line(source=ds, x='timestamp', y='r%d'%r, color=colors[r], legend='row %d'%(r+1), line_width=2)
+    for r in range(1,5):
+        p_rows.line(source=ds, x='timestamp', y='r%d'%r, color=colors[r-1], legend='row %d'%r, line_width=2)
     p_rows.legend.background_fill_alpha = 0.5
 
     # Column plots (one line per column of wells).
@@ -478,8 +427,8 @@ def format_bokeh_plot_html(experiment, plot_type):
 		    toolbar_location=None, tools=tools,
 		    x_range=range_x, y_range=range_y,
                     webgl=webgl)
-    for c in range(5):
-        p_cols.line(source=ds, x='timestamp', y='c%d'%c, color=colors[c], legend='col %d'%(c+1), line_width=2)
+    for c in range(1,6):
+        p_cols.line(source=ds, x='timestamp', y='c%d'%c, color=colors[c-1], legend='col %d'%c, line_width=2)
     p_cols.legend.background_fill_alpha = 0.5
 
     # Final layout and html generation.

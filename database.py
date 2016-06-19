@@ -4,7 +4,6 @@ import os.path
 import sqlite3
 
 import numpy as np
-import pandas as pd
 
 logger = logging.getLogger('database')
 
@@ -125,40 +124,6 @@ if new_db:
         data REACTOR_ARRAY
     );
     ''')
-
-
-###############################################################################
-# Helper functions.
-###############################################################################
-
-def read_experiment(experiment, table):
-    '''Read one of the measurement tables or notes for a given experiment as a dataframe.'''
-    with db:
-        all_tables = [_[0] for _ in
-                      db.execute('''SELECT name FROM sqlite_master
-                                    WHERE type='table'
-                                    AND name GLOB '*__*' ''')]
-    assert table in all_tables+['notes'], 'No such table.'
-    df = pd.read_sql_query('SELECT * FROM %s WHERE experiment_name=? ORDER BY timestamp ASC'%table,
-                           db,
-                           params=(experiment,))
-    return df
-
-def parse_formula(experiment, formula):
-    '''Return a python function corresponding to the given formula and experiment's strain.'''
-    import numpy
-    with db:
-        query = db.execute('''SELECT strain_name FROM experiments
-                              WHERE name=?''',
-                           (experiment,))
-        strain = query.fetchone()[0]
-        query = db.execute('''SELECT %s FROM strains
-                              WHERE name=?'''%formula,
-                           (strain,))
-        formula = query.fetchone()[0]
-    formula = eval('lambda x:'+formula, numpy.__dict__)
-    return formula
-
 
 
 ###############################################################################
