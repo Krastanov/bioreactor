@@ -597,12 +597,12 @@ t_addedit_strain = Template('''
         <legend>General</legend>
         <div class="pure-control-group">
             <label for="name">Strain Name<sup class="note">[1]</sup></label>
-            <input id="name" name="name" type="text" placeholder="" value="{name}">
+            <input id="name" name="name" type="text" placeholder="" value="{name}" class="pure-input-1-4">
         </div>
 
         <div class="pure-control-group">
             <label for="description">Description</label>
-            <textarea id="description" name="description" placeholder="">{description}</textarea>
+            <textarea id="description" name="description" placeholder="" class="pure-input-1-4">{description}</textarea>
         </div>
     <sup class="note">[1]: Change the name to create a new strain based on a previous one.</sup>
     </fieldset>
@@ -611,15 +611,15 @@ t_addedit_strain = Template('''
         <legend>Formulae</legend>
         <div class="pure-control-group">
             <label for="light_ratio_to_od_formula">Output/Input Light Intensity Ratio to Optical Density:</label>
-            <input id="light_ratio_to_od_formula" name="light_ratio_to_od_formula" type="text" placeholder="" value="{light_ratio_to_od_formula}">
+            <input id="light_ratio_to_od_formula" name="light_ratio_to_od_formula" type="text" placeholder="" value="{light_ratio_to_od_formula}" class="pure-input-1-4">
         </div>
         <div class="pure-control-group">
             <label for="od_to_biomass_formula">Optical Density to Biomass</label>
-            <input id="od_to_biomass_formula" name="od_to_biomass_formula" type="text" placeholder="" value="{od_to_biomass_formula}">
+            <input id="od_to_biomass_formula" name="od_to_biomass_formula" type="text" placeholder="" value="{od_to_biomass_formula}" class="pure-input-1-4">
         </div>
         <div class="pure-control-group">
             <label for="od_to_cell_count_formula">Optical Density to Cell Count</label>
-            <input id="od_to_cell_count_formula" name="od_to_cell_count_formula" type="text" placeholder="" value="{od_to_cell_count_formula}">
+            <input id="od_to_cell_count_formula" name="od_to_cell_count_formula" type="text" placeholder="" value="{od_to_cell_count_formula}" class="pure-input-1-4">
         </div>
     </fieldset>
 
