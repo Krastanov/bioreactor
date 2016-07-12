@@ -11,7 +11,7 @@ import cherrypy
 from cherrypy._cperror import HTTPRedirect
 
 from bokeh.embed import components
-from bokeh.io import gridplot, vplot, hplot
+from bokeh.layouts import gridplot
 from bokeh.models import ColumnDataSource, Range1d, Rect, HoverTool
 from bokeh.plotting import figure
 
@@ -324,7 +324,7 @@ def format_notes_html(experiment):
 
 t_experiment = Template('''
 <h1><a href="/experiment/{name}">Experiment: {name}</a></h1>
-<link rel="stylesheet" href="/web_resources/bokeh.0.11.1.min.css">
+<link rel="stylesheet" href="/web_resources/bokeh.0.12.0.min.css">
 <div class="pure-g">
 <div class="pure-u-3-4">
 <form class="pure-form">
@@ -333,7 +333,7 @@ t_experiment = Template('''
 </div>
 </form>
 <div>
-<script src="/web_resources/bokeh.0.11.1.min.js"></script>
+<script src="/web_resources/bokeh.0.12.0.min.js"></script>
 {HTMLbokeh}
 </div>
 </div>
@@ -364,7 +364,6 @@ def format_bokeh_plot_html(experiment, plot_type):
 
     # Prepare the data.
     df = read_plottype(experiment, plot_type)
-    df['timestamp'] = df.index # TODO XXX This is an abomination!
     ds = ColumnDataSource(df)
 
     # Summary plot (average over all wells).
@@ -396,7 +395,7 @@ def format_bokeh_plot_html(experiment, plot_type):
                y=(top+bottom)/2,
                fill_color='red', fill_alpha=0.2, line_color='red', line_alpha=0.6)
     box_r = p_mean.add_glyph(source_or_glyph=notes_ds, glyph=box)
-    box_hover = HoverTool(renderers=[box_r], tooltips='<div style="width: 100px;"><h4>@str_date</h4><p>@note</p></div>')
+    box_hover = HoverTool(renderers=[box_r], tooltips='<div style="width:100px;"><h4 style="font-size:0.5em;margin:1px;padding:1px;">@str_date</h4><p style="font-size:0.5em;margin:1px;padding:1px;">@note</p></div>')
     p_mean.add_tools(box_hover)
 
     # Grid plots (small plots, one for each well).
@@ -439,7 +438,7 @@ def format_bokeh_plot_html(experiment, plot_type):
     p_cols.legend.background_fill_alpha = 0.5
 
     # Final layout and html generation.
-    final_plot = vplot(hplot(p_mean, p_cols), hplot(p_rows, p_wells))
+    final_plot = gridplot([[p_mean, p_cols], [p_rows, p_wells]])
     bokeh_script, bokeh_div = components(final_plot)
     return bokeh_div+'\n'+bokeh_script
 
