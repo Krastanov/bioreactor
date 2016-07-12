@@ -42,6 +42,11 @@ LOG_CONF = {
             'level': 'INFO' ,
             'propagate': False
         },
+        'arduino': {
+            'handlers': ['default'],
+            'level': 'INFO' ,
+            'propagate': False
+        },
         'cherrypy.access': {
             'handlers': [],
             'level': 'INFO',
