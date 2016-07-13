@@ -283,16 +283,18 @@ def format_archive_html():
 
 # Template for presenting a note.
 t_note_main = Template('''
+<div class="notes_container">
 <h4>Notes</h4>
 <div class="list_notes max-height-scroll">
 <form class="pure-form">
     <textarea class="pure-input-1" name="note"></textarea>
     <input type="hidden" value="{experiment_name}" name="experiment_name">
-    <button type="button" onClick="addToNearestUL(this)" class="button-xsmall pure-button pure-button-primary pure-input-1">Add Note</button>
+    <button type="button" onClick="addAndRefreshContainer(this);" class="button-xsmall pure-button pure-button-primary pure-input-1">Add Note</button>
 </form>
 <ul class="boxed-list">
 {HTMLnotes}
 </ul>
+</div>
 </div>
 ''')
 t_note = Template('''
@@ -308,7 +310,7 @@ t_note = Template('''
 ''')
 
 def format_notes_html(experiment):
-    '''Prepare a list of all notes for a given experiment.'''
+    '''Prepare an AJAX-ish list of all notes for a given experiment.'''
     with db:
         notes = db.execute('''SELECT timestamp, note FROM notes
                               WHERE experiment_name=?
@@ -756,6 +758,7 @@ class Root:
             db.execute('''INSERT INTO notes (experiment_name, note)
                           VALUES (?, ?)''',
                        (experiment_name, note))
+        return format_notes_html(experiment_name)
 
     @cherrypy.expose
     def do_addedit_strain(self, name, description, light_ratio_to_od_formula,

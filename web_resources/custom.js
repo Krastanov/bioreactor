@@ -43,21 +43,19 @@ function deleteNearestLI(arg) {
     li.remove();
 }
 
-function addToNearestUL(arg) {
+function addAndRefreshContainer(arg) {
     var form = arg.parentElement;
-    var div = form.parentElement;
-    var ul = div.getElementsByTagName("UL")[0];
-    var li = document.createElement("LI");
+    var container = form.parentElement.parentElement;
     var note = form.getElementsByTagName("textarea")[0].value;
     var experiment = form.getElementsByTagName("input")[0].value;
     var t = document.createTextNode(note);
 
     var http = new XMLHttpRequest();
-    var url = "/do_add_note";
-    http.open("POST", url);
-    http.setRequestHeader("Content-type", "application/x-www-form-urlencoded");
-    http.send(`experiment_name=${experiment}&note=${note}`);
-
-    li.appendChild(t);
-    ul.insertBefore(li, ul.firstChild);
+    http.onreadystatechange = function() {
+      if (http.readyState == 4 && http.status == 200) {
+        container.outerHTML = http.responseText;
+      }
+    };
+    http.open("GET", `/do_add_note?experiment_name=${experiment}&note=${note}`);
+    http.send();
 }
