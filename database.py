@@ -45,7 +45,7 @@ if new_db:
     logger.info('No database file detected. Preparing a new one...')
     db.executescript('''
 
-    -- Strain that the reactor knows how to work with.
+    -- Strains that the reactor knows how to work with.
     CREATE TABLE strains (
         name TEXT PRIMARY KEY NOT NULL,
         description TEXT,
@@ -123,7 +123,16 @@ if new_db:
         experiment_name TEXT NOT NULL REFERENCES experiments(name) ON DELETE CASCADE,
         data REACTOR_ARRAY
     );
-    ''')
+
+    -- Temperature control log.
+    CREATE TABLE temperature_control_log (
+        timestamp TIMESTAMP PRIMARY KEY DEFAULT CURRENT_TIMESTAMP NOT NULL,
+        target_temp REAL NOT NULL,
+        error REAL NOT NULL,
+        proportional REAL NOT NULL,
+        integral REAL NOT NULL
+    )
+''')
 
 
 ###############################################################################

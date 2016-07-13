@@ -6,6 +6,8 @@ from nanpy import ArduinoApi,  SerialManager, Stepper, DallasTemperature
 from nanpy.arduinotree import ArduinoTree
 import numpy as np
 
+from database import db
+
 logger = logging.getLogger('arduino')
 
 
@@ -96,7 +98,6 @@ class Reactor:
         while self.pin_y_origin.digital_value:
             self.move_head_steps(0, -10)
 
-
     def move_head_to_well(self, row, col, instrument_offset):
         '''Move the head to the given well, taking into account the instrument offset.'''
         ...
@@ -142,7 +143,6 @@ class Reactor:
             self.arduino.analogWrite(self.pin_A_cool, int(-max_power*heat_flow))
             self.arduino.analogWrite(self.pin_B_cool, int(-max_power*heat_flow))
 
-
     def set_target_temp(self, target_temp):
         '''Set the target temperature for the temperature control loop.'''
         self._target_temp = target_temp
@@ -155,7 +155,8 @@ class Reactor:
         self._temperature_control_loop = True
         I = 0
         while self._temperature_control_loop:
-            P = self._target_temp-self.mean_temp()
+            error = self.mean_temp()-self._target_temp
+            P = -error
             control = P
             if -1 < control < 1: # XXX simplistic windup protection
                 I += P
@@ -166,8 +167,13 @@ class Reactor:
             control = max(-1., control)
             self.set_heat_flow(control)
             print(('%.2f '*3)%(P, I, control))
+            with db:
+                db.execute('''INSERT INTO temperature_control_log
+                              (target_temp, error,
+                              proportional, integral)
+                              VALUES (?,?,?,?)''',
+                              (self._target_temp, error, P, I))
             time.sleep(10)
-
 
     def set_uv(self, mode):
         '''Turn the UV on (mode=1) or off (mode=0)'''
