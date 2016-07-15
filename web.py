@@ -755,9 +755,9 @@ class Root:
                           to_record)
         from scheduler import s, StartExperiment
         start = StartExperiment(**kwargs)
-        s.enter(0,-1,start)
         prepared_events = [prepare_event(e, kwargs) for e in events
                            if e.__name__+'__check' in kwargs]
+        s.enter(0,-1,start)
         for e in prepared_events:
             s.enter(0,0,e)
         raise cherrypy.HTTPRedirect('/')
