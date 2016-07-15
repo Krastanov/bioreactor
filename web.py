@@ -165,17 +165,19 @@ t_new_event = Template('''
 t_new_event_args = Template('''
 <div class="pure-control-group">
     <label for="{event_name}_{arg}">{arg}</label>
-    <input id="{event_name}_{arg}" name="{event_name}_{arg}" placeholder="" type="text">
+    <input id="{event_name}_{arg}" name="{event_name}_{arg}" placeholder="" type="text" value="{default}">
 </div>
 ''')
 
 def format_event_arguments(event):
     '''Given an event, return a form with all arguments for that event.'''
-    arguments = list(inspect.signature(event.__init__).parameters)[1:]
+    aspec = inspect.getargspec(event.__init__)
+    arguments = zip(aspec.args[-len(aspec.defaults):],aspec.defaults)
     arguments_html='\n'.join([t_new_event_args.format(
                                 event_name=event.__name__,
-                                arg=arg)
-                              for arg in arguments])
+                                arg=arg,
+                                default=default)
+                              for arg,default in arguments])
     return arguments_html
 
 def format_new_html():

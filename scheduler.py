@@ -4,6 +4,8 @@ import sched
 import threading
 import time
 
+import pytimeparse
+
 import numpy as np
 
 from reactor import reactor
@@ -84,6 +86,16 @@ def stop_scheduler_thread():
 class Event:
     pass
 
+class RepeatedEvent(Event):
+    def __init__(self, delay='1min'):
+        try:
+            secs = float(delay)*60
+        except ValueError:
+            secs = pytimeparse.parse(delay)
+        if secs is None:
+            raise ValueError('Could not convert string "%s" to time.'%delay)
+        self.delay = secs
+
 class StartExperiment(Event):
     def __init__(self, name, light, temp, strain, description,
                  **kw):
@@ -107,11 +119,8 @@ class StartExperiment(Event):
                          (current_experiment, light_in_data))
         reactor.pause()
 
-class MeasureTemp(Event):
+class MeasureTemp(RepeatedEvent):
     '''Periodically measure the temperature of the wells.'''
-    def __init__(self, delay):
-        self.delay = float(delay)
-
     def __call__(self):
         data = reactor.temp_array()
         with db:
@@ -119,13 +128,10 @@ class MeasureTemp(Event):
                           VALUES (?, ?)''',
                          (current_experiment, data))
         logger.info('%s %s', type(self).__name__, data.mean())
-        s.enter(self.delay*60,0,self)
+        s.enter(self.delay,0,self)
 
-class MeasureLightOut(Event):
+class MeasureLightOut(RepeatedEvent):
     '''Periodically measure the light coming out of the wells.'''
-    def __init__(self, delay):
-        self.delay = float(delay)
-
     def __call__(self):
         data = reactor.light_out_array()
         with db:
@@ -133,13 +139,10 @@ class MeasureLightOut(Event):
                           VALUES (?, ?)''',
                          (current_experiment, data))
         logger.info('%s %s', type(self).__name__, data.mean())
-        s.enter(self.delay*60,0,self)
+        s.enter(self.delay,0,self)
 
-class WaterFill(Event):
+class WaterFill(RepeatedEvent):
     '''Periodically fill up with water (for evaporative losses).'''
-    def __init__(self, delay):
-        self.delay = float(delay)
-
     def __call__(self):
         data = reactor.fill_with_water()
         with db:
@@ -147,12 +150,12 @@ class WaterFill(Event):
                           VALUES (?, ?)''',
                          (current_experiment, data))
         logger.info('%s %s', type(self).__name__, data.mean())
-        s.enter(self.delay*60,0,self)
+        s.enter(self.delay,0,self)
 
-class DrainFill(Event):
+class DrainFill(RepeatedEvent):
     '''Periodically drain and refill with media.'''
-    def __init__(self, delay, drain_volume):
-        self.delay = float(delay)
+    def __init__(self, delay="1min", drain_volume="1"):
+        super().__init__(delay)
         self.drain_volume = float(drain_volume)
 
     def __call__(self):
@@ -167,7 +170,7 @@ class DrainFill(Event):
                           VALUES (?, ?)''',
                          (current_experiment, media_data))
         logger.info('%s: drain %s, media fill %s', type(self).__name__, 'drain', drained_data.mean(), 'media fill', media_data.mean())
-        s.enter(self.delay*60,0,self)
+        s.enter(self.delay,0,self)
 
 class StopExperiment(Event):
     def __call__(self):
