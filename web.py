@@ -8,7 +8,6 @@ import threading
 import os.path
 
 import cherrypy
-from cherrypy._cperror import HTTPRedirect
 
 from bokeh.embed import components
 from bokeh.layouts import gridplot
@@ -474,42 +473,50 @@ t_status = Template('''
 <div class="pure-u-1"><a href="/experiment/{experiment_name}">{experiment_name}</a> (<a href="/strain/{strain}">{strain}</a>): {description}</div>
 <div class="pure-u-3-4">plots</div>
 <div class="pure-u-1-4">
-    <div>
-        <h4>Schedule</h4>
-        <div class="list_notes max-height-scroll">
-        <ul class="boxed-list">
-        {HTMLevents}
-        </ul>
-        </div>
+    <div id="schedule">
+        {HTMLschedule}
     </div>
+    <script>trackSchedule();</script>
     <hr>
     <div>{HTMLnotes}</div>
 </div>
 </div>
 ''')
 
+# Templare for the schedule board.
+t_schedule = Template('''
+        <h4>Schedule</h4>
+        <div class="list_notes max-height-scroll">
+        <ul class="boxed-list">
+        {HTMLevents}
+        </ul>
+        </div>
+''')
+
 # Template for presenting an event.
 t_event = Template('''
-<li class="event" data-priority="{event.priority}" data-waiting="{time[1]}">
-{event.action.__class__.__name__}<span> in <time>{time[0]}</time></span>
+<li class="event" data-priority="{event.priority}" data-waiting="{waiting}">
+{event.action.__class__.__name__}<span> in <time data-seconds="{time}"></time></span>
 </li>
 ''')
 
+def format_schedule_html():
+    '''Create an HTML tree for the current schedule.'''
+    from scheduler import s
+    events_html = '\n'.join(t_event.format(event=e,
+                                           time=e.time-time.monotonic(),
+                                           waiting = 0 if e.time-time.monotonic()>0 else 1)
+                            for e in s.queue)
+    current_html = '<li class="event current-event">{0.action.__class__.__name__}<span> currently</span><div class="loader"></div></li>'.format(s.current) if s.current else ''
+    events_html = current_html+events_html
+    return t_schedule.format(HTMLevents=events_html)
+
 def format_status_html():
     '''Create a status page for the current experiment.'''
-    from scheduler import current_experiment, s
+    from scheduler import current_experiment
     if current_experiment is None:
         return t_main.format(HTMLmain_article='<h1>No Experiments Running</h1>')
     logger.info('Generating status page for experiment %s...', current_experiment)
-    def timestr(e):
-        delta = datetime.timedelta(0, int(e.time-time.monotonic()))
-        if delta < datetime.timedelta(0):
-            return 'waiting', 1
-        else:
-            return str(delta), 0
-    events_html = '\n'.join(t_event.format(event=e, time=timestr(e)) for e in s.queue)
-    current_html = '<li class="current-event">{0.action.__class__.__name__}<span> currently</span></li>'.format(s.current) if s.current else ''
-    events_html = current_html+events_html
     with db:
         c = db.execute('''SELECT strain_name, description FROM experiments
                        WHERE name=?''',
@@ -518,7 +525,7 @@ def format_status_html():
     return t_main.format(HTMLmain_article=t_status.format(experiment_name=current_experiment,
                                                           strain=strain,
                                                           description=description,
-                                                          HTMLevents=events_html,
+                                                          HTMLschedule=format_schedule_html(),
                                                           HTMLnotes=format_notes_html(current_experiment)))
 
 
@@ -686,11 +693,15 @@ class Root:
         return format_status_html()
 
     @cherrypy.expose
+    def schedule(self):
+        return format_schedule_html()
+
+    @cherrypy.expose
     def stop(self):
         from scheduler import s, StopExperiment
         if not any(isinstance(_.action, StopExperiment) for _ in s.queue):
             s.enter(0,-1,StopExperiment())
-        return format_status_html()
+        raise cherrypy.HTTPRedirect('/')
 
     @cherrypy.expose
     def archive(self):
@@ -749,7 +760,7 @@ class Root:
                            if e.__name__+'__check' in kwargs]
         for e in prepared_events:
             s.enter(0,0,e)
-        return t_main.format(HTMLmain_article='<h1>New Experiment Started!</h1>')
+        raise cherrypy.HTTPRedirect('/')
 
     @cherrypy.expose
     def do_add_note(self, note, experiment_name):

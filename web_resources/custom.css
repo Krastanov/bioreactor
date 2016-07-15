@@ -7,7 +7,6 @@ body {
 }
 body > article {
     flex: 1
-
 }
 .pure-g > div {
     box-sizing: border-box;
@@ -109,4 +108,18 @@ li.current-event > span {
     font-size: 70%;
     float: right;
     border-radius: 4px;
+}
+.loader {
+  float: left;
+  margin: 0;
+  height: 1em;
+  width: 1em;
+  animation: rotate 1s infinite linear;
+  border: 2px solid darkgreen;
+  border-right-color: transparent;
+  border-radius: 50%;
+}
+@keyframes rotate {
+  0%    { transform: rotate(0deg); }
+  100%  { transform: rotate(360deg); }
 }

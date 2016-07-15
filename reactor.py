@@ -193,7 +193,7 @@ class MockReactor:
     def __getattr__(self, name):
         def mock_function(*args):
             import time
-            time.sleep(10)
+            time.sleep(3)
             return np.random.random((4,5))*2-1
         return mock_function
 
