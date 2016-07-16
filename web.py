@@ -140,18 +140,17 @@ t_new = Template('''
 
     <fieldset>
         <legend>Configuration</legend>
+        <div>{HTMLeventbuttons}</div>
         {HTMLevents}
     </fieldset>
 
-    <div class="pure-controls">
-        <button type="submit" class="pure-button pure-button-primary">Start Experiment</button>
-    </div>
+    <button type="submit" class="pure-button pure-button-primary">Start Experiment</button>
 </form>
 ''')
 
 # Template for the configuration for a single event type.
 t_new_event = Template('''
-<div>
+<div id="{event_name}" style="display:none;">
 <h5>{event_name}</h5>
 <p>{event_description}</p>
 <div class="pure-controls">
@@ -168,6 +167,9 @@ t_new_event_args = Template('''
     <input id="{event_name}_{arg}" name="{event_name}_{arg}" placeholder="" type="text" value="{default}">
 </div>
 ''')
+
+# Template for the buttons toggling the event's availability.
+t_new_event_button = Template('''<button type="button" class="pure-button pure-u-1-6" onClick="toggleEventInput(this, '{event_name}');">{event_name}</button>''')
 
 def format_event_arguments(event):
     '''Given an event, return a form with all arguments for that event.'''
@@ -187,10 +189,12 @@ def format_new_html():
                              event_description=e.__doc__,
                              HTMLevent_arguments=format_event_arguments(e))
                            for e in events])
+    eventbuttons_html=' '.join([t_new_event_button.format(event_name=e.__name__) for e in events])
     with db:
         strainoptions_html=''.join('''<option value="{name}">{name}</option>'''.format(**r)
                                    for r in db.execute('SELECT name FROM strains ORDER BY name ASC'))
     return t_main.format(HTMLmain_article=t_new.format(HTMLevents=events_html,
+                                                       HTMLeventbuttons=eventbuttons_html,
                                                        HTMLstrainoptions=strainoptions_html))
 
 
@@ -750,15 +754,17 @@ class Root:
             prepared_kwargs = {a: kwargs['%s_%s'%(event.__name__,a)]
                                for a in arguments}
             return event(**prepared_kwargs)
+        from scheduler import s, StartExperiment
+        start = StartExperiment(**kwargs)
+        prepared_events = [prepare_event(e, kwargs) for e in events
+                           if e.__name__+'__check' in kwargs]
+        if not prepared_events:
+            raise ValueError('No measurement events scheduled.')
         with db:
             to_record = [kwargs[_] for _ in ['name', 'description', 'strain', 'row1', 'row2', 'row3', 'row4', 'col1', 'col2', 'col3', 'col4', 'col5']]
             db.execute('''INSERT INTO experiments (name, description, strain_name, row1, row2, row3, row4, col1, col2, col3, col4, col5)
                           VALUES (?, ?, ?,  ?,?,?,?, ?,?,?,?,?)''',
                           to_record)
-        from scheduler import s, StartExperiment
-        start = StartExperiment(**kwargs)
-        prepared_events = [prepare_event(e, kwargs) for e in events
-                           if e.__name__+'__check' in kwargs]
         s.enter(0,-1,start)
         for e in prepared_events:
             s.enter(0,0,e)

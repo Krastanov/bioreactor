@@ -106,3 +106,16 @@ function secondsToCountdownString(seconds) {
         }
     }
 }
+
+function toggleEventInput(button, eventName) {
+    var eventDiv = document.getElementById(eventName);
+    if (eventDiv.style.display == "none") {
+        eventDiv.style.display = "block";
+        document.getElementById(eventName+"__check").checked = true;
+        button.className += " pure-button-active";
+    } else {
+        eventDiv.style.display = "none";
+        document.getElementById(eventName+"__check").checked = false;
+        button.className = button.className.replace(" pure-button-active","");
+    }
+} 
