@@ -9,14 +9,10 @@ import os.path
 
 import cherrypy
 
-from bokeh.embed import components
-from bokeh.layouts import gridplot
-from bokeh.models import ColumnDataSource, Range1d, Rect, HoverTool
-from bokeh.plotting import figure
-
 from database import db
-from dataprocessing import possible_plots, read_plottype, read_experiment, read_all_plottypes
-from scheduler import events
+from dataprocessing import possible_plots, read_all_plottypes
+from plotting import full_plot_html
+from scheduler import events, current_experiment, reactor_scheduler, StartExperiment
 
 logger = logging.getLogger('webinterface')
 
@@ -339,9 +335,9 @@ t_experiment = Template('''
 {HTMLlinks}
 </div>
 </form>
-<div>
 <script src="/web_resources/bokeh.0.12.0.min.js"></script>
-{HTMLbokeh}
+<div id="bokeh_plot">
+<div class="loader"></div> Plot is loading...
 </div>
 </div>
 <div class="pure-u-1-4">
@@ -365,95 +361,10 @@ t_experiment = Template('''
 </div>
 ''')
 
-def format_bokeh_plot_html(experiment, plot_type):
-    '''Generate the HTML for a given experiment/plot combination.'''
-    plot_type = possible_plots[plot_type]
-
-    # Prepare the data.
-    df = read_plottype(experiment, plot_type)
-    ds = ColumnDataSource(df)
-
-    # Summary plot (average over all wells).
-    tools = 'pan,wheel_zoom,box_zoom,reset,resize,crosshair'
-    webgl = False
-    bottom = min(df['min'].min(), plot_type.min)
-    top    = max(df['max'].max(), plot_type.max)
-    left   = df.index.min()
-    right  = df.index.max()
-    range_y = Range1d(bottom, top)
-    range_x = Range1d(left, right)
-    p_mean = figure(width=350, height=350, x_axis_type='datetime',
-		    toolbar_location=None, tools=tools,
-                    x_range=range_x, y_range=range_y,
-                    webgl=webgl)
-    p_mean.line(source=ds, x='timestamp', y='median', color='black', legend='median', line_width=2)
-    p_mean.line(source=ds, x='timestamp', y='max', color='red',   legend='max',  line_width=2)
-    p_mean.line(source=ds, x='timestamp', y='min', color='blue',  legend='min',  line_width=2)
-    p_mean.border_fill_color = "white"
-    p_mean.legend.background_fill_alpha = 0.5
-
-    # Add hover notes to the summary plot.
-    notes = read_experiment(experiment, 'notes')
-    notes['str_date'] = notes.index.map(lambda _:_.strftime('%Y-%m-%d %H:%M:%S'))
-    notes_ds = ColumnDataSource(notes)
-    box = Rect(height=top-bottom,
-               width=(df.index.max()-df.index.min()).total_seconds()*1e3/20+30*60*1e3,
-               x='timestamp',
-               y=(top+bottom)/2,
-               fill_color='red', fill_alpha=0.2, line_color='red', line_alpha=0.6)
-    box_r = p_mean.add_glyph(source_or_glyph=notes_ds, glyph=box)
-    box_hover = HoverTool(renderers=[box_r], tooltips='<div style="width:100px;"><h4 style="font-size:0.5em;margin:1px;padding:1px;">@str_date</h4><p style="font-size:0.5em;margin:1px;padding:1px;">@note</p></div>')
-    p_mean.add_tools(box_hover)
-
-    # Grid plots (small plots, one for each well).
-    plots = []
-    for r in range(1,5):
-        cols = []
-        for c in range(1,6):
-            p = figure(width=100, height=100, x_axis_type='datetime',
-        	       min_border_top=2, min_border_right=2,
-        	       min_border_bottom=20, min_border_left=20,
-        	       toolbar_location=None,
-        	       tools=tools,
-        	       x_range=range_x, y_range=range_y,
-                       webgl=webgl)
-            p.line(source=ds, x='timestamp', y='%s%s'%(r,c))
-            p.xaxis.major_label_orientation = 3.14/4
-            p.xaxis.major_label_text_font_size = '0.6em'
-            p.yaxis.major_label_text_font_size = '0.6em'
-            cols.append(p)
-        plots.append(cols)
-    p_wells = gridplot(plots, toolbar_location='above')
-
-    # Row plots (one line per row of wells).
-    colors = ['#66c2a5','#fc8d62','#8da0cb','#e78ac3','#a6d854']
-    p_rows = figure(width=350, height=430, x_axis_type='datetime',
-		    toolbar_location=None, tools=tools,
-		    x_range=range_x, y_range=range_y,
-                    webgl=webgl)
-    for r in range(1,5):
-        p_rows.line(source=ds, x='timestamp', y='r%d'%r, color=colors[r-1], legend='row %d'%r, line_width=2)
-    p_rows.legend.background_fill_alpha = 0.5
-
-    # Column plots (one line per column of wells).
-    p_cols = figure(width=500, height=350, x_axis_type='datetime',
-		    toolbar_location=None, tools=tools,
-		    x_range=range_x, y_range=range_y,
-                    webgl=webgl)
-    for c in range(1,6):
-        p_cols.line(source=ds, x='timestamp', y='c%d'%c, color=colors[c-1], legend='col %d'%c, line_width=2)
-    p_cols.legend.background_fill_alpha = 0.5
-
-    # Final layout and html generation.
-    final_plot = gridplot([[p_mean, p_cols], [p_rows, p_wells]])
-    bokeh_script, bokeh_div = components(final_plot)
-    return bokeh_div+'\n'+bokeh_script
-
-def format_experiment_html(experiment, plot_type):
+def format_experiment_html(experiment):
     '''Load all data for a given experiment, make bokeh plots, and load in the HTML template.'''
-    links = '\n'.join('''<div class="pure-u-1-5"><a class="pure-input-1 pure-button {button_type}" href="/experiment/{experiment}/{plot_type}">{plot_type}</a></div>
-                      '''.format(button_type='pure-button-active' if p==plot_type else '',
-                                 experiment=experiment,
+    links = '\n'.join('''<div class="pure-u-1-5"><a class="pure-input-1 pure-button" href="/experiment/{experiment}/{plot_type}">{plot_type}</a></div>
+                      '''.format(experiment=experiment,
                                  plot_type=p)
                       for p in possible_plots.keys())
     with db:
@@ -462,7 +373,6 @@ def format_experiment_html(experiment, plot_type):
         r = query.fetchone()
     return t_main.format(HTMLmain_article=t_experiment.format(
         HTMLlinks=links,
-        HTMLbokeh=format_bokeh_plot_html(experiment, plot_type),
         HTMLnotes=format_notes_html(experiment),
         **r
         ))
@@ -508,18 +418,16 @@ t_event = Template('''
 
 def format_schedule_html():
     '''Create an HTML tree for the current schedule.'''
-    from scheduler import s
     events_html = '\n'.join(t_event.format(event=e,
                                            time=e.time-time.monotonic(),
                                            waiting = 0 if e.time-time.monotonic()>0 else 1)
-                            for e in s.queue)
+                            for e in reactor_scheduler.queue)
     current_html = '<li class="event current-event">{0.action.__class__.__name__}<span> currently</span><div class="loader"></div></li>'.format(s.current) if s.current else ''
     events_html = current_html+events_html
     return t_schedule.format(HTMLevents=events_html)
 
 def format_status_html():
     '''Create a status page for the current experiment.'''
-    from scheduler import current_experiment
     if current_experiment is None:
         return t_main.format(HTMLmain_article='<h1>No Experiments Running</h1>')
     logger.info('Generating status page for experiment %s...', current_experiment)
@@ -704,9 +612,9 @@ class Root:
 
     @cherrypy.expose
     def stop(self):
-        from scheduler import s, StopExperiment
-        if not any(isinstance(_.action, StopExperiment) for _ in s.queue):
-            s.enter(0,-1,StopExperiment())
+        if not any(isinstance(_.action, StopExperiment)
+                   for _ in reactor_scheduler.queue):
+            reactor_scheduler.enter(0,-1,StopExperiment())
         raise cherrypy.HTTPRedirect('/')
 
     @cherrypy.expose
@@ -714,8 +622,12 @@ class Root:
         return format_archive_html()
 
     @cherrypy.expose
-    def experiment(self, name, plot_type='light out'):
-        return format_experiment_html(name, plot_type)
+    def experiment(self, name):
+        return format_experiment_html(name)
+
+    @cherrypy.expose
+    def experiment_full_plot(self, name, plot_type):
+        return full_plot_html(experiment, plot_type)
 
     @cherrypy.expose
     def new(self):
@@ -754,7 +666,6 @@ class Root:
             prepared_kwargs = {a: kwargs['%s_%s'%(event.__name__,a)]
                                for a in arguments}
             return event(**prepared_kwargs)
-        from scheduler import s, StartExperiment
         start = StartExperiment(**kwargs)
         prepared_events = [prepare_event(e, kwargs) for e in events
                            if e.__name__+'__check' in kwargs]
@@ -765,9 +676,9 @@ class Root:
             db.execute('''INSERT INTO experiments (name, description, strain_name, row1, row2, row3, row4, col1, col2, col3, col4, col5)
                           VALUES (?, ?, ?,  ?,?,?,?, ?,?,?,?,?)''',
                           to_record)
-        s.enter(0,-1,start)
+        reactor_scheduler.enter(0,-1,start)
         for e in prepared_events:
-            s.enter(0,0,e)
+            reactor_scheduler.enter(0,0,e)
         raise cherrypy.HTTPRedirect('/')
 
     @cherrypy.expose
@@ -807,29 +718,33 @@ class Root:
 # Configure the server with proper access to ports and static content files.
 ###############################################################################
 
-cherrypy.config.update({'server.socket_host': '127.0.0.1',
-                        'server.socket_port': 8080,
-                        'tools.encode.on'   : True,
-                        'tools.encode.encoding': 'utf-8',
-                        'engine.autoreload.on': False,
-                        'request.show_tracebacks': True,
-                        'request.show_mismatched_params': True,
-                        'log.screen': False,
-                        'log.access_file': '',
-                        'log.error_file': ''
-                       })
-
-pwd = os.path.dirname(os.path.realpath(__file__))
-conf = {'/web_resources': {'tools.staticdir.on': True,
-                           'tools.staticdir.dir': os.path.join(pwd, 'web_resources')
-                          },
-       }
-
-root = Root()
-cherrypy.tree.mount(root=root, config=conf)
-
 def start_web_interface_thread():
     '''Start the web server in a dedicated thread. Return thread handler.'''
+    cherrypy.config.update({'server.socket_host': '127.0.0.1',
+			    'server.socket_port': 8080,
+			    'tools.encode.on'   : True,
+			    'tools.encode.encoding': 'utf-8',
+			    'engine.autoreload.on': False,
+			    'request.show_tracebacks': True,
+			    'request.show_mismatched_params': True,
+			    'log.screen': False,
+			    'log.access_file': '',
+			    'log.error_file': ''
+			   })
+
+    pwd = os.path.dirname(os.path.realpath(__file__))
+    conf = {'/web_resources': {'tools.staticdir.on': True,
+			       'tools.staticdir.dir': os.path.join(pwd, 'web_resources')
+			      },
+	   }
+
+    root = Root()
+    cherrypy.tree.mount(root=root, config=conf)
+
+    from cherrypy.lib import cpstats
+    cherrypy.config.update({'tools.cpstats.on': True})
+    cherrypy.tree.mount(cpstats.StatsPage(), '/cpstats')
+
     cherrypy.engine.start()
     t = threading.Thread(target=cherrypy.engine.block,
                          name='WebInterface')

@@ -53,7 +53,7 @@ class ResolvedScheduler(sched.scheduler):
                 self.current = None
                 delayfunc(0)
 
-s = ResolvedScheduler()
+reactor_scheduler = ResolvedScheduler()
 current_experiment = None
 
 stop_thread = threading.Event()
