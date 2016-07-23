@@ -63,7 +63,7 @@ def start_scheduler_thread():
         '''Continuously run the scheduler. If the queue is empty, wait a second and rerun.'''
         logger.info('Starting the scheduler...')
         while not stop_thread.is_set():
-            s.run()
+            reactor_scheduler.run()
             time.sleep(1)
         logger.info('The scheduler has stopped.')
     t = threading.Thread(target=target,
@@ -128,7 +128,7 @@ class MeasureTemp(RepeatedEvent):
                           VALUES (?, ?)''',
                          (current_experiment, data))
         logger.info('%s %s', type(self).__name__, data.mean())
-        s.enter(self.delay,0,self)
+        reactor_scheduler.enter(self.delay,0,self)
 
 class MeasureLightOut(RepeatedEvent):
     '''Periodically measure the light coming out of the wells.'''
@@ -139,7 +139,7 @@ class MeasureLightOut(RepeatedEvent):
                           VALUES (?, ?)''',
                          (current_experiment, data))
         logger.info('%s %s', type(self).__name__, data.mean())
-        s.enter(self.delay,0,self)
+        reactor_scheduler.enter(self.delay,0,self)
 
 class WaterFill(RepeatedEvent):
     '''Periodically fill up with water (for evaporative losses).'''
@@ -150,7 +150,7 @@ class WaterFill(RepeatedEvent):
                           VALUES (?, ?)''',
                          (current_experiment, data))
         logger.info('%s %s', type(self).__name__, data.mean())
-        s.enter(self.delay,0,self)
+        reactor_scheduler.enter(self.delay,0,self)
 
 class DrainFill(RepeatedEvent):
     '''Periodically drain and refill with media.'''
@@ -170,7 +170,7 @@ class DrainFill(RepeatedEvent):
                           VALUES (?, ?)''',
                          (current_experiment, media_data))
         logger.info('%s: drain %s, media fill %s', type(self).__name__, 'drain', drained_data.mean(), 'media fill', media_data.mean())
-        s.enter(self.delay,0,self)
+        reactor_scheduler.enter(self.delay,0,self)
 
 class StopExperiment(Event):
     def __call__(self):
