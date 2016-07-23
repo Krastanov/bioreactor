@@ -77,7 +77,7 @@ from scheduler import start_scheduler_thread, stop_scheduler_thread
 def report(*threads):
     return '\n    '.join('%s: %s'%(t.name, t.is_alive()) for t in threads)
 
-logger.info('Starting all threads...')
+logger.info('Starting scheduler and web threads...')
 scheduler_thread = start_scheduler_thread()
 web_interface_thread = start_web_interface_thread()
 webbrowser.open('http://localhost:8080', new=1, autoraise=True)
@@ -88,6 +88,6 @@ try:
         time.sleep(5)
 except KeyboardInterrupt:
     logger.info('Interrupted by user. Shutting down...')
-logger.info('Stopping all threads...')
+logger.info('Stopping scheduler and web threads...')
 stop_scheduler_thread()
 stop_web_interface_thread()

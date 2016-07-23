@@ -148,35 +148,43 @@ class Reactor:
         self._target_temp = target_temp
 
     def stop_temperature_control(self):
-        self._temperature_control_loop = False
+        '''Stop the temperature control thread.'''
+        if hasattr(self, '_temp_thread') and self._temp_thread.is_alive():
+            self._stop_temperature_control.set()
+            while self._temp_thread.is_alive():
+                time.sleep(0.1)
 
-    def temperature_control_loop(self, target_temp):
-        '''A PI loop for temperature control.'''
-        self._temperature_control_loop = True
-        I = 0
-        while self._temperature_control_loop:
-            error = self.mean_temp()-self._target_temp
-            P = -error
-            control = P
-            if -1 < control < 1: # XXX simplistic windup protection
-                I += P
-            else:
-                I = 0
-            control += I/10
-            control = min(+1., control)
-            control = max(-1., control)
-            self.set_heat_flow(control)
-            print(('%.2f '*3)%(P, I, control))
-            with db:
-                db.execute('''INSERT INTO temperature_control_log
-                              (target_temp, error,
-                              proportional, integral)
-                              VALUES (?,?,?,?)''',
-                              (self._target_temp, error, P, I))
-            time.sleep(10)
+    def start_temperature_control(self, target_temp):
+        '''A PI loop for temperature control. Starts its own thread.'''
+        if hasattr(self, '_temp_thread') and self._temp_thread.is_alive():
+            raise ValueError('A temperature control thread is already active')
+        self._stop_temperature_control = threading.Event()
+        def temp_control():
+            I = 0
+            while not self._stop_temperature_control.is_set():
+                error = self.mean_temp()-self._target_temp
+                P = -error
+                control = P
+                if -1 < control < 1: # XXX simplistic windup protection
+                    I += P
+                else:
+                    I = 0
+                control += I/10
+                control = min(+1., control)
+                control = max(-1., control)
+                self.set_heat_flow(control)
+                print(('%.2f '*3)%(P, I, control))
+                with db:
+                    db.execute('''INSERT INTO temperature_control_log
+                                  (target_temp, error,
+                                  proportional, integral)
+                                  VALUES (?,?,?,?)''',
+                                  (self._target_temp, error, P, I))
+                time.sleep(10)
+        self._temp_thread = threading.Thread(target=temp_control, name='TemperatureControl')
 
     def set_uv(self, mode):
-        '''Turn the UV on (mode=1) or off (mode=0)'''
+        '''Turn the UV on (mode=1) or off (mode=0).'''
         assert mode in [0,1], 'UV supports only on or off modes.'
         self.pin_uv.digital_value = mode
 
