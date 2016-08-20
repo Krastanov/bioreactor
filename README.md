@@ -10,11 +10,11 @@ Automated bioreactor for bacteria growth.
   coded (maybe it will move to `calibration` in the distant future).
 
 - Three threads are created: the scheduler from submodule `scheduler`; the web
-  interface from submodule `web`; the temperature control. The web interface
-  talks to the scheduler from a single location. The scheduler does not talk to
-  anybody.
+  interface from submodule `web`; the temperature control in `reactor`. The web
+  interface talks to the scheduler from a single location. The scheduler does
+  not talk to anybody.
 
-- An `sqlite` on-disk database is used by most threads. Both threads access the
+- An `sqlite` on-disk database is used by most threads. Threads access the
   database for reading and writing, relying only on `sqlite`'s internal locks.
   No optimizations of disk access are done (might lead to wear of flash-based
   drives).
@@ -26,9 +26,10 @@ Automated bioreactor for bacteria growth.
   are not guaranteed to work. Special symbols might explode. More testing
   necessary.
 
-- Temperature control is done with a PID loop in a separate (third) thread. It
-  relies on `nanpy` for properly locking the serial connection resource to the
-  Arduino controller.
+- Temperature control is done with a PID loop in a separate (third) thread.
+  Some protection and resets through `usbdevicesfs` is enabled (requires the
+  compilation of `usbreset.c`) in the case of a hangup. Additional watchdogs
+  are possible in the Arduino, but are not currently enabled.
 
 - Proper database normalization would be to have a single table with data
   measurements with a column dedicated to measurement type, but the more naive

@@ -78,6 +78,21 @@ if new_db:
         note TEXT
     );
 
+    -- Temperature control log.
+    CREATE TABLE temperature_control_log (
+        timestamp TIMESTAMP PRIMARY KEY DEFAULT CURRENT_TIMESTAMP NOT NULL,
+        target_temp REAL NOT NULL,
+        error REAL NOT NULL,
+        proportional REAL NOT NULL,
+        integral REAL NOT NULL
+    );
+
+    -- Arduino communication log.
+    CREATE TABLE communication_log (
+        timestamp TIMESTAMP PRIMARY KEY DEFAULT CURRENT_TIMESTAMP NOT NULL,
+        note TEXT NOT NULL
+    );
+
     -- The following tables all contain measurements.
     -- The table names are of the form quantity__unit (with a double
     -- underscore).
@@ -123,15 +138,6 @@ if new_db:
         experiment_name TEXT NOT NULL REFERENCES experiments(name) ON DELETE CASCADE,
         data REACTOR_ARRAY
     );
-
-    -- Temperature control log.
-    CREATE TABLE temperature_control_log (
-        timestamp TIMESTAMP PRIMARY KEY DEFAULT CURRENT_TIMESTAMP NOT NULL,
-        target_temp REAL NOT NULL,
-        error REAL NOT NULL,
-        proportional REAL NOT NULL,
-        integral REAL NOT NULL
-    )
 ''')
 
 

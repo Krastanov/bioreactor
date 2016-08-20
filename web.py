@@ -70,7 +70,7 @@ t_main = Template('''\
 </div>
 </article>
 <footer>
-Built with nanpy, cherrypy, sqlite, bokeh, purecss, and more by Hegarty, Krastanov, and Racharaks.
+Built with cherrypy, sqlite, bokeh, purecss, and more on Arduino and Raspberry Pi by Hegarty, Krastanov, and Racharaks.
 </footer>
 </body>
 </html>
