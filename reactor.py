@@ -38,6 +38,7 @@ class SerialManager:
         self.serial = serial.Serial(port=self.port, baudrate=9600, timeout=4)
         time.sleep(2)
     def send(self, msg, debug=True):
+        msg += ('#%X'%binascii.crc32(msg)).encode()
         with self.lock:
             count = 0
             while count<5:
@@ -48,7 +49,6 @@ class SerialManager:
                         print('reset has happened')
                 elif buf:
                     raise ComProtocolError('Buffer not clean.')
-                msg += ('#%X'%binascii.crc32(msg)).encode()
                 self.serial.write(msg + b'\r')
                 echo = self.serial.read_until(b'\x04') # ascii EOT
                 ret =  self.serial.read_until(b'\x04') # ascii EOT

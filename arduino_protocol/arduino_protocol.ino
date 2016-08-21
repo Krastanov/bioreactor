@@ -35,8 +35,8 @@
 #define ECHO true
 #define WATCHDOG false
 
-String buf = ""; // contains the received command
-char crc[8];     // contains the received checksum of the command as hex representation of a 32bit number
+String buf = "";                    // contains the received command
+char crc[9] = "\0\0\0\0\0\0\0\0\0"; // contains the NUL terminated received checksum of the command as hex representation of a 32bit number
 
 FastCRC32 CRC32; // module for calculating crc checksums
 // CRC32 is a ridiculous overkill, but it is in the python standard library.
@@ -71,13 +71,13 @@ void loop() { // each run of `loop` waits for one command, parses and executes i
         size_t i=0;
         while (i<8) {
           crc[i] = busyRead();
-          if (crc[i] == '\r') { 
-            reportError();
-            return;
+          if (crc[i] == '\r') {     // in case it took less than 8 characters 
+            crc[i] = '\0';
+            break;
           }
           i += 1;
         }
-                                    // if the checksum does not match, cancel this comand
+                                    // if the checksum does not match, cancel this command
         if (CRC32.crc32((uint8_t *)buf.c_str(), buf.length()) != strtoul(crc, NULL, 16)) { // convert the checksum string back to an integer and compare to the calculated checksum
           clearRemainingChars();
           reportError();
