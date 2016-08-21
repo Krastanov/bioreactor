@@ -69,10 +69,12 @@ void loop() { // each run of `loop` waits for one command, parses and executes i
 
       else if (inByte == '#') {     // if the character signifying a checksum is present, read and verify the checksum
         size_t i=0;
-        while (i<8) {
+        bool received = false;
+        while (i<9) {
           crc[i] = busyRead();
           if (crc[i] == '\r') {     // in case it took less than 8 characters 
             crc[i] = '\0';
+            received = true;
             break;
           }
           i += 1;
@@ -84,8 +86,7 @@ void loop() { // each run of `loop` waits for one command, parses and executes i
           return;
         }
 
-        inByte = busyRead();        // read one character
-        if (inByte == '\r') {       // if the delimiter character, the data has been received, do something with it
+        if (received == true) {     // if the delimiter character was received, the data has been received, do something with it
           printWithCRC(buf);
           executeCommand();
           return;
