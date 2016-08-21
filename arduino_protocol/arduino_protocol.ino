@@ -23,13 +23,13 @@
 // of humans using this interactively. For the same reason we need echo (which stops us from using
 // many of the Arduino builtin methods).
 
-#include <FastCRC.h>
 #include <stdlib.h>
 #include <avr/wdt.h>
-#include <MemoryFree.h>
 #include <Stepper.h>
-#include <OneWire.h>
-#include <DallasTemperature.h>
+#include <MemoryFree.h>
+#include <FastCRC.h>               // tested with version 1.2
+#include <OneWire.h>               // tested with version 2.3.2
+#include <DallasTemperature.h>     // tested with version 3.7.6
 
 #define SERIAL_SPEED 9600
 #define ECHO true
