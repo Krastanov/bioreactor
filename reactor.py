@@ -104,10 +104,10 @@ class Reactor(SerialManager):
 
         First move in the x, then move in y.'''
         while self.send(b'checkOrigin')[0]:
-            self.move_head_steps(-10, 0)
+            self.move_head_steps(-1, 0)
 
         while self.send(b'checkOrigin')[1]:
-            self.move_head_steps(0, -10)
+            self.move_head_steps(0, -1)
 
     def move_head_to_well(self, row, col, instrument_offset):
         '''Move the head to the given well, taking into account the instrument offset.'''
