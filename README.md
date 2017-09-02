@@ -1,6 +1,8 @@
 # bioreactor
 Automated bioreactor for bacteria growth.
 
+See https://blog.krastanov.org/2016/11/15/bioreactor/ for pictures and description.
+
 ## Design notes
 
 - The code assumes the existence of a single reactor, hence numerous global
