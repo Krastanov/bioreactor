@@ -37,3 +37,5 @@ See https://blog.krastanov.org/2016/11/15/bioreactor/ for pictures and descripti
   measurements with a column dedicated to measurement type, but the more naive
   approach with multiple tables (one per measurement type) is good enough for
   this simple project.
+
+Copyright (C) 2017 Hegarty, Krastanov, Racharaks
